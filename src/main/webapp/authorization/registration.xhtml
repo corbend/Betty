@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:pt="http://xmlns.jcp.org/jsf/passthrough"
+      xmlns:jsf="http://xmlns.jcp.org/jsf"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<h:head>
+    <title>User Registration</title>
+</h:head>
+<h:body>
+<p:panel id="basic" header="Registration" style="margin-bottom:20px">
+    <h:form action="">
+        <h:panelGrid columns="2" cellpadding="10">
+            <h:outputLabel value="Login"/>
+            <h:inputText value="#{userRegistrationCtrl.user.login}"/>
+            <h:outputLabel value="Password 1"/>
+            <p:password id="pwd1" value="#{userRegistrationCtrl.user.password}" match="pwd2" label="Password 1" required="true" />
+            <h:outputLabel for="pwd2" value="Password 2: *" />
+            <p:password id="pwd2" value="#{userRegistrationCtrl.user.password2}" label="Password 2" required="true" />
+            <h:outputLabel value="Email"/>
+            <h:inputText value="#{userRegistrationCtrl.user.email}"/>
+            <h:outputLabel value="Telephone"/>
+            <h:inputText value="#{userRegistrationCtrl.user.telephone}"/>
+            <h:commandButton action="#{userRegistrationCtrl.doRegisterUser}" value="Done">
+                <f:ajax execute="@form"/>
+            </h:commandButton>
+        </h:panelGrid>
+    </h:form>
+</p:panel>
+</h:body>
+</html>

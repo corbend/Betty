@@ -4,12 +4,15 @@ import main.java.models.games.Game;
 import main.java.models.games.GameShedule;
 import org.apache.commons.lang3.StringUtils;
 
-import javax.ejb.PostActivate;
-import javax.ejb.Stateless;
+import javax.annotation.Resource;
+import javax.ejb.*;
+import javax.ejb.Timer;
 import javax.interceptor.AroundInvoke;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.persistence.TypedQuery;
 import java.util.*;
+
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
@@ -23,10 +26,13 @@ public class GameSheduleManager {
 
     private String url = "http://espn.go.com/travel/sports/calendar/";
 
+    @Resource
+    private SessionContext context;
+
     @PersistenceContext
     private EntityManager em;
 
-    private List<WebElement> parseAsSelenium(Game game, int forYear, int forMonth, int forDate) {
+    private List<WebElement> parseWithSelenium(Game game, int forYear, int forMonth, int forDate) {
         List<GameShedule> shedules = new ArrayList<>();
         // Create a new instance of the Firefox driver
         // Notice that the remainder of the code relies on the interface,
@@ -61,7 +67,11 @@ public class GameSheduleManager {
 
         for (WebElement sheduleLi : lst) {
             GameShedule newShedule = new GameShedule();
-            newShedule.setGame(game);
+            //newShedule.setGame(game);
+
+            List<GameShedule> ls = game.getGameShedules();
+            ls.add(newShedule);
+            game.setGameShedules(ls);
 
             List<WebElement> teamsName = sheduleLi.findElements(By.className("team-logo-small"));
             System.out.println("TEAMS=" + teamsName);
@@ -110,9 +120,36 @@ public class GameSheduleManager {
         url += "&type=list";
 
         System.out.println("PARSE URL=" + url);
-        parseAsSelenium(game, forYear, forMonth, forDate);
+        parseWithSelenium(game, forYear, forMonth, forDate);
 
         return shedules;
+    }
+
+    public void createTimer(Game game, Calendar cl) {
+        TimerService ts = context.getTimerService();
+        ts.createTimer(cl.getTime(), game);
+    }
+
+    @Timeout
+    public void onShedule(Timer timer) {
+
+        System.out.println("TIMER EXPIRED->");
+        Calendar cl = new GregorianCalendar();
+        System.out.println("GET SHEDULE FOR->" + cl);
+        getAvailableShedules((Game) timer.getInfo(), cl.get(Calendar.MONTH), cl.get(Calendar.DAY_OF_MONTH), cl.get(Calendar.YEAR));
+    }
+
+    public List<GameShedule> getSavedShedulesForGame(Game game, Date sheduleDate) {
+
+        List<GameShedule> gs;
+        TypedQuery<GameShedule> query = em.createNamedQuery("GameShedule.getForDate", GameShedule.class);
+
+        query.setParameter("date", sheduleDate);
+        query.setParameter("gameId", game);
+
+        gs = query.getResultList();
+
+        return gs;
     }
 }
 

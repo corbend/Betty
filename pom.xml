@@ -7,31 +7,44 @@
     <groupId>Monolith</groupId>
     <artifactId>Betty</artifactId>
     <version>1.0</version>
-    <packaging>jar</packaging>
+    <packaging>war</packaging>
+
+    <!--<properties>-->
+        <!--<endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>-->
+        <!--<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>-->
+    <!--</properties>-->
 
     <dependencies>
         <dependency>
             <groupId>javax</groupId>
             <artifactId>javaee-api</artifactId>
             <version>7.0</version>
-            <!--<scope>provided</scope>-->
+            <scope>provided</scope>
         </dependency>
-        <dependency>
+        <!--<dependency>-->
             <!--для запуска проекта вне полноценного контейнера EJB-->
-            <groupId>org.glassfish.main.extras</groupId>
-            <artifactId>glassfish-embedded-all</artifactId>
-            <version>4.0</version>
+            <!--<groupId>org.glassfish.main.extras</groupId>-->
+            <!--<artifactId>glassfish-embedded-all</artifactId>-->
+            <!--<version>4.0</version>-->
             <!--<scope>provided</scope>-->
-        </dependency>
+        <!--</dependency>-->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>9.3-1102-jdbc41</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.eclipse.persistence</groupId>
-            <artifactId>org.eclipse.persistence.jpa</artifactId>
-            <version>2.5.0</version>
+            <artifactId>eclipselink</artifactId>
+            <version>2.5.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.persistence</groupId>
+            <artifactId>org.eclipse.persistence.jpa.modelgen.processor</artifactId>
+            <version>2.5.1</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -63,6 +76,21 @@
             <artifactId>selenium-chrome-driver</artifactId>
             <version>2.44.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.primefaces</groupId>
+            <artifactId>primefaces</artifactId>
+            <version>5.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.embedded</groupId>
+            <artifactId>maven-embedded-glassfish-plugin</artifactId>
+            <version>4.0</version>
+        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>org.glassfish.main.security</groupId>-->
+            <!--<artifactId>security-ee</artifactId>-->
+            <!--<version>4.0</version>-->
+        <!--</dependency>-->
     </dependencies>
     <build>
         <sourceDirectory>src</sourceDirectory>
@@ -77,6 +105,14 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>2.2</version>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.2.1</version>
@@ -85,7 +121,24 @@
                     <executable>java</executable>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.glassfish</groupId>
+                <artifactId>maven-embedded-glassfish-plugin</artifactId>
+                <version>4.0</version>
+                <configuration>
+                    <app>${project.build.directory}/${project.build.finalName}.war</app>
+                    <port>8080</port>
+                    <contextRoot>${project.build.finalName}</contextRoot>
+                    <name>${project.build.finalName}</name>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+    <!--<repositories>-->
+        <!--<repository>-->
+            <!--<id>Internal company repository</id>-->
+            <!--<url>file://${basedir}/lib</url>-->
+        <!--</repository>-->
+    <!--</repositories>-->
 
 </project>

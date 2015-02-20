@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:pt="http://xmlns.jcp.org/jsf/passthrough"
+      xmlns:jsf="http://xmlns.jcp.org/jsf"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<h:head>
+    <ui:define><title>Admin Dashboard</title></ui:define>
+</h:head>
+<h:body>
+    <h:messages id="errors" infoStyle="color:blue" warnStyle="color:orange"
+                errorStyle="color:red"/>
+    <ui:composition template="/layout.xhtml">
+        <ui:define name="content">
+            <h1>Dashboard</h1>
+        </ui:define>
+    </ui:composition>
+</h:body>
+</html>

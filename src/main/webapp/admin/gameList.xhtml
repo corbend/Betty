@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:pt="http://xmlns.jcp.org/jsf/passthrough"
+      xmlns:jsf="http://xmlns.jcp.org/jsf"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<h:head>
+    <ui:define><title>Game List</title></ui:define>
+</h:head>
+<h:body>
+    <h1>WELCOME!</h1>
+    <h:messages id="errors" infoStyle="color:blue" warnStyle="color:orange"
+                errorStyle="color:red"/>
+    <ui:composition template="/layout.xhtml">
+        <ui:define name="content">
+            <p:dataTable var="g" value="#{gameCtrl.findAllGames()}">
+                <p:column headerText="Name">
+                    <h:outputText value="#{g.name}" />
+                </p:column>
+                <p:column headerText="repeatParseEvery">
+                    <h:outputText value="#{g.sheduleEvery}" />
+                </p:column>
+                <p:column headerText="Shedule Window">
+                    <h:outputText value="#{g.sheduleWindow}" />
+                </p:column>
+            </p:dataTable>
+        </ui:define>
+    </ui:composition>
+</h:body>
+</html>

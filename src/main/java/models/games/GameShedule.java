@@ -5,15 +5,14 @@ import java.util.Date;
 
 @Entity
 @Table(name="game_shedules")
+@NamedQueries({
+     @NamedQuery(name="getForDate", query="SELECT a FROM GameShedule a WHERE a.dateStart = :date")
+})
 public class GameShedule {
 
     @Id
     @GeneratedValue
     private Long id;
-
-    @ManyToOne
-    @JoinColumn(name="game_id")
-    private Game game;
 
     private String eventName;
     private String eventLocation;
@@ -27,13 +26,13 @@ public class GameShedule {
     @Temporal(value=TemporalType.DATE)
     private Date dateEnd;
 
-    public Game getGame() {
-        return game;
-    }
-
-    public void setGame(Game v) {
-        game = v;
-    }
+//    public Game getGame() {
+//        return game;
+//    }
+//
+//    public void setGame(Game v) {
+//        game = v;
+//    }
 
     public String getEventName() {
         return eventName;

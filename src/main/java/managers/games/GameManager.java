@@ -36,14 +36,30 @@ public class GameManager {
         return g;
     }
 
+    public List<Game> getAllActiveGames() {
+
+        TypedQuery<Game> query = em.createNamedQuery("Game.findActive", Game.class);
+
+        return query.getResultList();
+    }
+
     public Game createNewGame(String gameName) {
 
         Game g = new Game();
         g.setName(gameName);
+        g.setActive(true);
+        g.setSheduleWindow(600L);
+        g.setPeriodTimeUnit(Game.TimeUnit.SECOND);
+        g.setSheduleEvery(10);
 
         em.persist(g);
         return g;
     }
+
+    public void createNewGame(Game game) {
+        em.persist(game);
+    }
+
 
     //public void setAvailableParser(Game game, EventParser parser) {
 //        game.setParser();
