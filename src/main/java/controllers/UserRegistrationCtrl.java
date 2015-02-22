@@ -1,22 +1,34 @@
 package main.java.controllers;
 
+import main.java.managers.messages.AccountMessage;
 import main.java.managers.users.UserEJB;
 import main.java.models.users.User;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.faces.application.FacesMessage;
+import javax.faces.bean.ManagedBean;
 import javax.faces.bean.RequestScoped;
-import javax.faces.bean.ViewScoped;
 import javax.faces.context.FacesContext;
+import javax.faces.view.ViewScoped;
+import javax.inject.Inject;
 import javax.inject.Named;
+import javax.jms.*;
+import java.io.Serializable;
 import java.util.logging.Logger;
 
-@Named(value="userRegistrationCtrl")
+@ManagedBean
+//@Stateless
 @RequestScoped //dont use RequestScoped from EJB package
-@Stateless
-public class UserRegistrationCtrl {
+public class UserRegistrationCtrl implements Serializable {
+
+    @Inject
+    @JMSConnectionFactory("jms/javaee7/ConnectionFactory")
+    private JMSContext context;
+    @Resource(lookup = "jms/javaee7/AccountActionQueue")
+    private Queue accountQueue;
 
     private User user = new User();
 
@@ -38,9 +50,38 @@ public class UserRegistrationCtrl {
         return "authorization/registration.xhtml";
     }
 
-    public String doRegisterUser() {
+    private void createDefaultAccount(User user) throws JMSException {
 
-        log.fine("Prepare to create user!" + user.getLogin());
+        //создание аккаунта по умолчанию при первом входе пользователя в систему
+        ObjectMessage msg = context.createObjectMessage();
+        AccountMessage accMsg = new AccountMessage();
+        String userName = user.getLogin();
+        accMsg.setAction("CREATE_DEFAULT");
+        accMsg.setEntityId(user.getLogin());
+        msg.setObject(accMsg);
+
+        context.createProducer().send(accountQueue, msg);
+        JMSConsumer consumer = context.createConsumer(accountQueue);
+
+        while (true) {
+            ObjectMessage inputMsg = (ObjectMessage) consumer.receive();
+            AccountMessage inputAccMsg = (AccountMessage) inputMsg.getObject();
+            log.fine(inputAccMsg.getStatus());
+            String verifiedId = inputAccMsg.getEntityId();
+
+            if (verifiedId == null) {
+                throw new NoSuchFieldError("Verification failed!");
+            }
+
+            if (verifiedId.equals(userName)) {
+                log.fine("Default Account for user " + user.getLogin() + "has been created");
+                return;
+            }
+        }
+    }
+
+    public String doRegisterUser() throws JMSException {
+
         String login = "admin";
         String email = "admin@domain.com";
         String telephone = "12345678901";
@@ -61,8 +102,10 @@ public class UserRegistrationCtrl {
         FacesContext.getCurrentInstance().addMessage(null,
                 new FacesMessage(FacesMessage.SEVERITY_INFO, user.getLogin(),
                         "User" + user.getLogin() + " was created with id=" + user.getLogin()));
-        log.fine("User is created!");
-        return "account.xhtml";
+
+        createDefaultAccount(user);
+
+        return "userRedirect.xhtml";
     }
 
     public String cancelRegistration() {

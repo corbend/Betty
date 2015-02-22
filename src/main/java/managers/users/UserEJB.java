@@ -4,16 +4,17 @@ import main.java.managers.users.services.annotations.Sha256Crypt;
 import main.java.managers.users.services.interfaces.*;
 import main.java.managers.users.services.interfaces.SecurityManager;
 import main.java.models.users.User;
+import main.java.models.users.UserGroup;
 
 import javax.annotation.Resource;
 import javax.ejb.SessionContext;
 import javax.ejb.Stateless;
-import javax.enterprise.inject.InjectionException;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -53,19 +54,14 @@ public class UserEJB {
         logger.log(Level.FINE, "SAVE NEW USER->" + login + ", " + password + ", " + email + ", " + telephone);
         User usr = new User(login, email, telephone);
 
-        if (crypter == null) {
-            throw new InjectionException("Crypter injection error!");
-        }
-
-        if (password == null) {
-            password = "admin";
-        }
-
         try {
             List<String> securities = crypter.crypt(password, "");
 
             usr.setPasswordHash(securities.get(0));
             usr.setPasswordSalt(securities.get(1));
+            List<UserGroup> groups = new ArrayList<>(1);
+            groups.add(new UserGroup("user", usr.getLogin()));
+            usr.setGroups(groups);
             em.persist(usr);
         } catch (NoSuchAlgorithmException e) {
             context.setRollbackOnly();

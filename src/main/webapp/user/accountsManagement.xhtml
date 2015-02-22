@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:pt="http://xmlns.jcp.org/jsf/passthrough"
+      xmlns:jsf="http://xmlns.jcp.org/jsf"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<h:head>
+    <ui:define><title>My Accounts</title></ui:define>
+</h:head>
+<h:body>
+    <ui:composition template="/layout.xhtml">
+        <ui:define name="content">
+            <h:form>
+                <p:panel id="accountsTablePanel" header="My Accounts" style="height:70%;">
+                    <p:dataTable id="checkboxDT" var="account" value="#{accountCtrl.getAccounts()}" selection="#{accountCtrl.activeAccount}" rowKey="#{account.id}" style="margin-bottom:0">
+                        <p:column selectionMode="multiple" style="width:16px;text-align:center"/>
+                        <p:column headerText="Id">
+                            <h:outputText value="#{account.id}" />
+                        </p:column>
+                        <p:column headerText="Amount">
+                            <h:outputText value="#{account.totalAmount}" />
+                        </p:column>
+                        <p:column headerText="Status">
+                            <h:outputText value="#{account.statusString}" />
+                        </p:column>
+                        <p:column headerText="Created">
+                            <h:outputText value="#{account.createdDate}" />
+                        </p:column>
+                        <f:facet name="footer">
+                            <p:commandButton process="checkboxDT" value="Show Detail"/>
+                        </f:facet>
+                    </p:dataTable>
+                </p:panel>
+                <h:form id="accountManageView" style="height: 30%">
+                    <p:panel id="accountManagePanel" header="Account Info">
+                        <h:panelGrid columns="2">
+                            <h:outputText value="Current Balance"/>
+                            <h:outputText value="#{accountCtrl.activeAccount.totalAmount}"/>
+                        </h:panelGrid>
+                        <p:panel id="increaseBalancePanel" header="Account Feed">
+                            <h:outputText value="Increase Balance"/>
+                            <h:commandButton action="#{accountCtrl.increaseBalance}" value="Continue"/>
+                        </p:panel>
+                        <p:panel id="transferPanel" header="Transfer To">
+                            <h:outputText value="Transfer Balance"/>
+                            <h:commandButton action="#{accountCtrl.transferMoney}" value="Continue"/>
+                        </p:panel>
+                        <p:panel id="deleteAccountPanel" header="Delete Account">
+                            <h:commandButton action="#{accountCtrl.deleteAccount}" value="Continue"/>
+                        </p:panel>
+                    </p:panel>
+                </h:form>
+            </h:form>
+        </ui:define>
+    </ui:composition>
+</h:body>
+</html>

@@ -1,7 +1,9 @@
 package main.java.controllers;
 
 import javax.ejb.Stateless;
+import javax.faces.bean.ManagedBean;
 import javax.faces.bean.RequestScoped;
+import javax.faces.bean.SessionScoped;
 import javax.faces.context.FacesContext;
 import javax.inject.Named;
 import javax.servlet.ServletException;
@@ -10,9 +12,9 @@ import javax.servlet.http.HttpSession;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-@Named
+@ManagedBean
+//@Stateless
 @RequestScoped
-@Stateless
 public class LogoutCtrl {
     private static Logger log = Logger.getLogger(LogoutCtrl.class.getName());
 

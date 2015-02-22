@@ -8,11 +8,15 @@
       xmlns:jsf="http://xmlns.jcp.org/jsf"
       xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
 <h:head>
-    <title>My Account</title>
+    <ui:define><title>Edit My Account</title></ui:define>
 </h:head>
 <h:body>
-    <h1>WELCOME!</h1>
-    <h:messages id="errors" infoStyle="color:blue" warnStyle="color:orange"
-                errorStyle="color:red"/>
+    <ui:composition template="/layout.xhtml">
+        <ui:define name="content">
+            <h:form>
+
+            </h:form>
+        </ui:define>
+    </ui:composition>
 </h:body>
 </html>

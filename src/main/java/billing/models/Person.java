@@ -11,7 +11,7 @@ public class Person {
     @GeneratedValue
     private Long id;
 
-    private Long externalId;
+    private String externalId;
     private String firstName;
     private String middleName;
     private String lastName;
@@ -37,11 +37,11 @@ public class Person {
     }
 
     @Column(name="external_id")
-    public Long getExternalId() {
+    public String getExternalId() {
         return externalId;
     }
 
-    public void setExternalId(Long value) {
+    public void setExternalId(String value) {
         externalId = value;
     }
 

@@ -3,16 +3,27 @@ package main.java.managers.messages;
 
 import java.io.Serializable;
 
-public class AccountMessage implements Serializable{
+public class AccountMessage implements Serializable {
 
     private String action;
     private String nextAction;
 
-    public Long getEntityId() {
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    private String status;
+
+    private String entityId;
+    public String getEntityId() {
         return entityId;
     }
 
-    public void setEntityId(Long entityId) {
+    public void setEntityId(String entityId) {
         this.entityId = entityId;
     }
 
@@ -24,9 +35,11 @@ public class AccountMessage implements Serializable{
         this.nextAction = nextAction;
     }
 
-    private Long entityId;
+
     private Long accountId;
     private Double amount;
+
+    public AccountMessage() {}
 
     public AccountMessage(String action, Long accountId) {
         this.action = action;

@@ -29,7 +29,7 @@ public class User implements Serializable {
         this.groups = groups;
     }
 
-    @OneToMany
+    @OneToMany(cascade = CascadeType.PERSIST)
     @JoinColumn(name="user_name")
     private List<UserGroup> groups;
 

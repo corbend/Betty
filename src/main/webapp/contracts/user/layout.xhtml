@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:pt="http://xmlns.jcp.org/jsf/passthrough"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<h:head>
+    <ui:insert name="title"></ui:insert>
+</h:head>
+<h:body style="background-color: #aaa;">
+    <div class="container">
+        <h:form>
+            <p:panel header="User Menu" style="width:300px; position: absolute; left: 0; top: 0; bottom: 0;">
+                <p:panelMenu style="width: 100%; height: 100%;">
+                    <p:submenu label="Accounts">
+                        <p:menuitem value="Profile" actionListener="#{userMenuCtrl.editUserProfile}"/>
+                        <p:menuitem value="Create" actionListener="#{userMenuCtrl.createNewAccount}"/>
+                        <p:menuitem value="Manage" actionListener="#{userMenuCtrl.goManageAccounts}"/>
+                    </p:submenu>
+                    <p:submenu label="Bets">
+                        <p:menuitem value="Active" actionListener="#{userMenuCtrl.createNewBets}"/>
+                        <p:menuitem value="Manage" actionListener="#{userMenuCtrl.goManageActiveBets}"/>
+                    </p:submenu>
+                    <p:submenu label="Sport News">
+                        <p:menuitem value="Top Rated" actionListener="#{userMenuCtrl.showNews}"/>
+                        <p:menuitem value="My Favorites" actionListener="#{userMenuCtrl.showFavorites}" />
+                    </p:submenu>
+                    <p:separator />
+                    <p:submenu label="Sport Analytics">
+                        <p:menuitem value="View" actionListener="#{userMenuCtrl.showAnalytics}"/>
+                    </p:submenu>
+                    <p:separator />
+                    <p:submenu label="History" >
+                        <p:menuitem value="Show Last" actionListener="#{userMenuCtrl.showLastHistory}"/>
+                        <p:menuitem value="Clear All" actionListener="#{userMenuCtrl.clearHistoryAll}"/>
+                    </p:submenu>
+                </p:panelMenu>
+            </p:panel>
+        </h:form>
+        <div class="content" style="position: absolute; left: 320px; right: 20px; bottom: 300px; top: 20px;">
+            <ui:insert name="content"></ui:insert>
+        </div>
+
+        <div class="row" style="position: absolute; left: 320px; right: 20px; bottom: 20px; height: 300px;">
+            <h:form>
+                <div class="messages" style="width: 50%; height: 100%; float:left;">
+                    <p:panel header="Messages And System Events">
+
+                    </p:panel>
+                </div>
+            </h:form>
+            <h:form>
+                <div class="upcoming_event" style="width: 50%; height: 100%; float:right;">
+                    <p:panel header="Upcoming Events">
+
+                    </p:panel>
+                </div>
+            </h:form>
+        </div>
+        <ui:insert name="footer"></ui:insert>
+
+        <div class="logout-panel">
+            <h:form>
+                <h:commandLink action="#{logoutCtrl.logout}" value="Logout" />
+            </h:form>
+        </div>
+    </div>
+</h:body>
+</html>

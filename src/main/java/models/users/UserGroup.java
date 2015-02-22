@@ -6,6 +6,13 @@ import javax.persistence.*;
 @Table(name="users_groups")
 public class UserGroup {
 
+    public UserGroup() {}
+
+    public UserGroup(String groupname, String user_name) {
+        this.user_name = user_name;
+        this.groupname = groupname;
+    }
+
     @Id
     @GeneratedValue
     private Long id;

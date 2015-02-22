@@ -1,11 +1,19 @@
 package main.java.billing.models;
 
 import javax.persistence.*;
+import java.util.Date;
 import java.util.List;
 
 @Entity
 @Table(name="accounts")
+@NamedQueries({
+        @NamedQuery(name="FIND_ALL", query="SELECT a FROM Account a")
+})
 public class Account {
+
+    @Id
+    @GeneratedValue
+    private Long id;
 
     public Long getId() {
         return id;
@@ -15,12 +23,25 @@ public class Account {
         this.id = id;
     }
 
-    @Id
-    @GeneratedValue
-    private Long id;
-
-    @OneToOne
+    @OneToOne(mappedBy="externalId", cascade = CascadeType.PERSIST)
+    //TODO - добавить при следующей миграции базы
+    //@JoinColumn(name="externalid")
     private Person person;
+
+    @Column(name="amount")
+    private Double totalAmount = 0.0;
+
+    public Date getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(Date createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    @Column(name="created_date")
+    @Temporal(TemporalType.DATE)
+    private Date createdDate;
 
     @OneToMany(mappedBy="destAccount")
     @JoinColumn(name="dest_account_id")
@@ -46,14 +67,14 @@ public class Account {
         this.inTransactions = inTransactions;
     }
 
-    private boolean locked;
+    private boolean locked = false;
 
-    public Double getAmount() {
-        return amount;
+    public Double getTotalAmount() {
+        return totalAmount;
     }
 
-    public void setAmount(Double amount) {
-        this.amount = amount;
+    public void getTotalAmount(Double amount) {
+        this.totalAmount = amount;
     }
 
     public String getCurrency() {
@@ -64,7 +85,6 @@ public class Account {
         this.currency = currency;
     }
 
-    private Double amount;
     private String currency = "RU";
 
     public Person getPerson() {
@@ -85,5 +105,19 @@ public class Account {
 
     public boolean isLocked() {
         return locked;
+    }
+
+    //transients
+    @Transient
+    private String statusString;
+    public String getStatusString() {
+        if ((statusString == null || statusString.equals("")) && !locked) {
+            statusString = "active";
+        }
+        return statusString;
+    }
+
+    public void setStatusString(String statusString) {
+        this.statusString = statusString;
     }
 }

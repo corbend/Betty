@@ -27,7 +27,7 @@ public class ShedulePlanner {
     private GameSheduleManager sheduleManager;
 
     //каждый день формируем расписание игр
-    @Schedule(second="*/10", persistent = false)
+    //@Schedule(second="*/10", persistent = false)
     public void putShedulesOnPlan() {
 
         Calendar curDate = new GregorianCalendar();

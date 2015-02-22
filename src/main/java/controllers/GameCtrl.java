@@ -3,22 +3,21 @@ package main.java.controllers;
 import main.java.managers.games.GameManager;
 import main.java.models.games.Game;
 
-import javax.annotation.PostConstruct;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.faces.application.FacesMessage;
+import javax.faces.bean.ManagedBean;
 import javax.faces.bean.RequestScoped;
-import javax.faces.bean.ViewScoped;
+import javax.faces.view.ViewScoped;
 import javax.faces.context.FacesContext;
-import javax.inject.Inject;
 import javax.inject.Named;
 import java.io.Serializable;
 import java.util.List;
 
-@Named
+@ManagedBean
+//@Stateless
 @RequestScoped
-@Stateless
-public class GameCtrl {
+public class GameCtrl implements Serializable {
 
     @EJB
     private GameManager gameManager;
