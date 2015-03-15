@@ -15,7 +15,6 @@ import java.io.Serializable;
 import java.util.List;
 
 @ManagedBean
-//@Stateless
 @RequestScoped
 public class GameCtrl implements Serializable {
 

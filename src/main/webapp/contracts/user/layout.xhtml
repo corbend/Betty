@@ -10,7 +10,7 @@
     <ui:insert name="title"></ui:insert>
 </h:head>
 <h:body style="background-color: #aaa;">
-    <div class="container">
+    <div class="container" style="position: absolute; top: 0: bottom: 0; left: 0; right: 0; overflow-y: auto;">
         <h:form>
             <p:panel header="User Menu" style="width:300px; position: absolute; left: 0; top: 0; bottom: 0;">
                 <p:panelMenu style="width: 100%; height: 100%;">
@@ -38,27 +38,31 @@
                     </p:submenu>
                 </p:panelMenu>
             </p:panel>
+            <div class="status_bar">
+                <p:growl showDetail="true"/>
+            </div>
         </h:form>
         <div class="content" style="position: absolute; left: 320px; right: 20px; bottom: 300px; top: 20px;">
             <ui:insert name="content"></ui:insert>
         </div>
 
-        <div class="row" style="position: absolute; left: 320px; right: 20px; bottom: 20px; height: 300px;">
-            <h:form>
-                <div class="messages" style="width: 50%; height: 100%; float:left;">
+        <div class="row" style="position: relative; left: 320px; right: 20px; bottom: 20px; height: 300px;">
+            <h:form style="width: 50%; height: 100%; float:left;">
+                <div class="messages" style="width: 100%; height: 100%;">
                     <p:panel header="Messages And System Events">
 
                     </p:panel>
                 </div>
             </h:form>
-            <h:form>
-                <div class="upcoming_event" style="width: 50%; height: 100%; float:right;">
+            <h:form style="width: 50%; height: 100%; float:right;">
+                <div class="upcoming_event" style="width: 100%; height: 100%;">
                     <p:panel header="Upcoming Events">
 
                     </p:panel>
                 </div>
             </h:form>
         </div>
+
         <ui:insert name="footer"></ui:insert>
 
         <div class="logout-panel">

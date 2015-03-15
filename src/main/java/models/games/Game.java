@@ -1,5 +1,7 @@
 package main.java.models.games;
 
+import main.java.models.bets.BetGroup;
+
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -12,7 +14,7 @@ import java.util.List;
     @NamedQuery(name="Game.findByName", query="SELECT g FROM Game g WHERE g.name = :gameName"),
     //тупой запрос
     @NamedQuery(name="Game.findAll", query="SELECT g FROM Game g"),
-    @NamedQuery(name="Game.findActive", query="SELECT g FROM Game g WHERE g.active = false")
+    @NamedQuery(name="Game.findActive", query="SELECT g FROM Game g WHERE g.active = true")
 })
 public class Game implements Serializable {
 
@@ -46,8 +48,7 @@ public class Game implements Serializable {
 
     //модель игры
     @Id
-    //@SequenceGenerator(name = "idSequence", sequenceName = "seq_id", allocationSize = 1, initialValue = 1)
-    @GeneratedValue//(strategy = GenerationType.SEQUENCE, generator = "idSequence")
+    @GeneratedValue
     private Long id;
     private String name;
     private Integer numberOfPeriods;
@@ -56,8 +57,8 @@ public class Game implements Serializable {
     private Integer numberOfPlayersInTeam;
 
     @OneToMany
-    @JoinColumn(name="game_id")
-    private List<GameShedule> gameShedules;
+    @JoinColumn(name="game_schedule_id")
+    private List<GameEvent> gameEvents;
 
     //за какой промежуток времени будет создаваться расписание
     private Long sheduleWindow;
@@ -66,6 +67,17 @@ public class Game implements Serializable {
 
     //период обновления расписания
     private int sheduleEvery;
+
+    @OneToMany
+    @JoinColumn(name="bet_group_id")
+    private List<BetGroup> betGroups;
+    public List<BetGroup> getBetGroups() {
+        return betGroups;
+    }
+
+    public void setBetGroups(List<BetGroup> betGroups) {
+        this.betGroups = betGroups;
+    }
 
     private boolean active;
 
@@ -157,15 +169,15 @@ public class Game implements Serializable {
         active = v;
     }
 
-    public List<GameShedule> getGameShedules() {
-        if (gameShedules == null) {
-            gameShedules = new ArrayList();
+    public List<GameEvent> getGameEvents() {
+        if (gameEvents == null) {
+            gameEvents = new ArrayList();
         }
-        return gameShedules;
+        return gameEvents;
     }
 
-    public void setGameShedules(List<GameShedule> lst) {
-        gameShedules = lst;
+    public void setGameEvents(List<GameEvent> lst) {
+        gameEvents = lst;
     }
 
 }

@@ -1,12 +1,9 @@
 package main.java.managers.games;
 
 import main.java.models.games.Game;
-import main.java.models.games.GameShedule;
 //import org.slf4j.Logger;
 
-import javax.annotation.Resource;
 import javax.ejb.*;
-import javax.ejb.Timer;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import java.util.*;

@@ -10,7 +10,8 @@ import javax.jms.JMSDestinationDefinition;
 @JMSConnectionFactoryDefinition(name = "jms/javaee7/ConnectionFactory",
 className = "javax.jms.ConnectionFactory")
 @JMSDestinationDefinition(name = "jms/javaee7/AccountActionQueue",
-        className = "javax.jms.Queue", interfaceName = "javax.jms.Destination")
+        className = "javax.jms.Queue", interfaceName = "javax.jms.Destination"
+)
 public class JMSProvider {
 
 }

@@ -5,13 +5,22 @@ import main.java.models.users.User;
 import javax.persistence.*;
 import java.util.Date;
 
-//@Entity
+@MappedSuperclass
 public abstract class UserTemporal {
 
     @Id
     @GeneratedValue
     private Long id;
+    public Long getId() {
+        return id;
+    }
 
+    public void setId(Long v) {
+        id = v;
+    }
+
+    @JoinColumn(name="user_id")
+    private User user;
     public User getUser() {
         return user;
     }
@@ -20,20 +29,9 @@ public abstract class UserTemporal {
         this.user = user;
     }
 
-    @ManyToOne
-    @JoinColumn(name="user_id")
-    private User user;
-
     @Temporal(value= TemporalType.DATE)
     private Date acquiredDate;
     @Temporal(value=TemporalType.DATE)
     private Date resolvedDate;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long v) {
-        id = v;
-    }
 }

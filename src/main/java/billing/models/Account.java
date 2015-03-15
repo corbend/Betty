@@ -7,7 +7,8 @@ import java.util.List;
 @Entity
 @Table(name="accounts")
 @NamedQueries({
-        @NamedQuery(name="FIND_ALL", query="SELECT a FROM Account a")
+        @NamedQuery(name="FIND_ALL", query="SELECT a FROM Account a"),
+        @NamedQuery(name="Account.getService", query="SELECT a FROM Account a WHERE a.serviceType='service'")
 })
 public class Account {
 
@@ -23,9 +24,19 @@ public class Account {
         this.id = id;
     }
 
-    @OneToOne(mappedBy="externalId", cascade = CascadeType.PERSIST)
+    @Column(name="service_type")
+    private String serviceType;
+    public String getServiceType() {
+        return serviceType;
+    }
+
+    public void setServiceType(String serviceType) {
+        this.serviceType = serviceType;
+    }
+
+    @OneToOne(mappedBy="account", cascade = CascadeType.PERSIST)
     //TODO - добавить при следующей миграции базы
-    //@JoinColumn(name="externalid")
+    @JoinColumn(name="person_id")
     private Person person;
 
     @Column(name="amount")
@@ -43,11 +54,11 @@ public class Account {
     @Temporal(TemporalType.DATE)
     private Date createdDate;
 
-    @OneToMany(mappedBy="destAccount")
+    @OneToMany(mappedBy="destAccount", cascade = CascadeType.PERSIST)
     @JoinColumn(name="dest_account_id")
     private List<Transaction> inTransactions;
 
-    @OneToMany(mappedBy="srcAccount")
+    @OneToMany(mappedBy="srcAccount", cascade = CascadeType.PERSIST)
     @JoinColumn(name="src_account_id")
     private List<Transaction> outTransactions;
 
@@ -73,7 +84,7 @@ public class Account {
         return totalAmount;
     }
 
-    public void getTotalAmount(Double amount) {
+    public void setTotalAmount(Double amount) {
         this.totalAmount = amount;
     }
 

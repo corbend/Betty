@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:pt="http://xmlns.jcp.org/jsf/passthrough"
+      xmlns:jsf="http://xmlns.jcp.org/jsf"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<h:head>
+    <ui:define><title>My Accounts</title></ui:define>
+    <link href="css/user_bets.css" rel="stylesheet"/>
+    <script src="js/api.js"/>
+</h:head>
+<h:body>
+    <ui:composition template="/layout.xhtml">
+        <ui:define name="content">
+            <h:form id="globalForm">
+                <p:panel id="eventsTablePanel" header="Game Events" style="width: 100%; height:60%;">
+                    <p:dataTable id="eventsTable" var="event" value="#{betManageCtrl.events}" selectionMode="single" selection="#{userBetsListView.selectedEvent}" rowKey="#{event.id}">
+                        <f:facet name="header">
+                            <h:outputText value="Date From"/>
+                            <p:calendar id="eventDateStart" value="#{betManageCtrl.scheduleStartDate}" style="display:inline-block;">
+                                <p:ajax event="dateSelect" listener="#{betManageCtrl.onDateStartSelect}" update="eventsTable" />
+                            </p:calendar>
+                            <h:outputText value="Date To"/>
+                            <p:calendar id="eventDateEnd" value="#{betManageCtrl.scheduleEndDate}" style="display:inline-block;">
+                                <p:ajax event="dateSelect" listener="#{betManageCtrl.onDateEndSelect}" update="eventsTable" />
+                            </p:calendar>
+                        </f:facet>
+                        <p:ajax event="rowSelect" listener="#{userBetsListView.onSelectGameEvent}" update=":globalForm:betManagementForm:betsTable :globalForm:betManagementForm:active_bets_messages"/>
+                        <p:column headerText="Game Event Id">
+                            <h:outputLabel value="#{event.id}" />
+                        </p:column>
+                        <p:column headerText="Game">
+                            <h:outputLabel value="#{event.game.name}" />
+                        </p:column>
+                        <p:column headerText="Date Of Event">
+                            <h:outputLabel value="#{event.dateStart}" />
+                        </p:column>
+                        <p:column headerText="Location">
+                            <h:outputLabel value="#{event.eventLocation}" />
+                        </p:column>
+                        <p:column headerText="Team1">
+                            <h:outputLabel value="#{event.team1Name}" />
+                        </p:column>
+                        <p:column headerText="Team2">
+                            <h:outputLabel value="#{event.team2Name}" />
+                        </p:column>
+                        <f:facet name="footer">
+                            <p:commandButton value="Show Detail"/>
+                            <p:commandButton actionListener="#{userEventListView.addToWatchList}" value="Add To Watch List"/>
+                        </f:facet>
+                    </p:dataTable>
+                </p:panel>
+
+                <h:form id="betManagementForm">
+                    <p:growl id="active_bets_messages"/>
+                    <p:panel id="betsTablePanel" header="Available Bets" style="width: 100%; height:40%;">
+                        <p:dataTable id="betsTable" var="bet" value="#{userBetsListView.liveBets}" selectionMode="single" selection="#{userBetsListView.selectedLiveBet}" rowKey="#{bet.id}">
+                            <p:ajax event="rowSelect" listener="#{activeBetsListView.onSelectLiveBet}" update=":globalForm:betManagementForm:activeBetsTable"/>
+                            <p:column headerText="Live Bet Id">
+                                <h:outputLabel value="#{bet.id}" />
+                            </p:column>
+                            <p:column headerText="Type">
+                                <h:outputLabel value="#{bet.type}" />
+                            </p:column>
+                            <p:column headerText="Coefficient">
+                                <h:outputLabel value="#{bet.coefficient}" />
+                            </p:column>
+                            <p:column headerText="Last Change">
+                                <h:outputLabel value="#{bet.lastChange}" />
+                            </p:column>
+                            <f:facet name="footer">
+                                <h:outputText value="Bet Ammount"/>
+                                <h:inputText value="#{userBetsListView.newBet.amount}"/>
+                                <p:commandButton update=":globalForm:betManagementForm:activeBetsTable :globalForm:betManagementForm:active_bets_messages" actionListener="#{userBetsListView.makeNewBet}" value="Make Bet"/>
+                                <button onclick="makeBet()">Test WebSockets</button>
+                            </f:facet>
+                        </p:dataTable>
+                    </p:panel>
+
+                    <p:panel id="activeBetsPanel" header="Active Bets" style="width: 100%; height:40%;">
+                        <p:dataTable id="activeBetsTable" var="activeBet" value="#{activeBetsListView.activeBets}" selectionMode="single" selection="#{activeBetsListView.selectedBet}" rowKey="#{activeBet.id}">
+
+                            <!--<p:column headerText="Description">-->
+                                <!--<h:outputLabel value="#{activeBet.liveBet.description}" />-->
+                            <!--</p:column>-->
+                            <p:column headerText="Bet Id">
+                                <h:outputLabel value="#{activeBet.id}" />
+                            </p:column>
+                            <p:column headerText="Type">
+                                <h:outputLabel value="#{activeBet.liveBet.type}" />
+                            </p:column>
+                            <p:column headerText="Coefficient">
+                                <h:outputLabel value="#{activeBet.liveBet.coefficient}" />
+                            </p:column>
+                            <p:column headerText="Ammount">
+                                <h:outputLabel value="#{activeBet.amount}" />
+                            </p:column>
+                            <!--<f:facet name="footer">-->
+                                <!--<h:outputText value="Total: #{activeBetListView.activeBets.size()}"/>-->
+                            <!--</f:facet>-->
+                        </p:dataTable>
+                    </p:panel>
+                </h:form>
+            </h:form>
+        </ui:define>
+    </ui:composition>
+</h:body>
+</html>

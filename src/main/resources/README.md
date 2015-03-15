@@ -8,6 +8,32 @@
 
 1 - создание в панели администратора jdbcPool
   url = jdbc:postgresql://localhost:5432/Betty
+
+2 - настройка TimerService в Postgres
+    http://stackoverflow.com/questions/14934920/postgresql-and-glassfish-ejb-timer-tbl-table
+    CREATE TABLE public."EJB__TIMER__TBL"
+    (
+      "CREATIONTIMERAW" bigint NOT NULL,
+      "BLOB" bytea,
+      "TIMERID" character varying(255) NOT NULL,
+      "CONTAINERID" bigint NOT NULL,
+      "OWNERID" character varying(255) NULL,
+      "STATE" integer NOT NULL,
+      "PKHASHCODE" integer NOT NULL,
+      "INTERVALDURATION" bigint NOT NULL,
+      "INITIALEXPIRATIONRAW" bigint NOT NULL,
+      "LASTEXPIRATIONRAW" bigint NOT NULL,
+      "SCHEDULE" character varying(255) NULL,
+      "APPLICATIONID" bigint NOT NULL,
+
+      CONSTRAINT "PK_EJB__TIMER__TBL" PRIMARY KEY ("TIMERID")
+    )
+    WITH (
+      OIDS=FALSE
+    );
+    ALTER TABLE "EJB__TIMER__TBL"
+      OWNER TO postgres;
+
 TODO
 
 #ПЛАН ПРОЕКТА

@@ -15,8 +15,7 @@
         <ui:define name="content">
             <h:form>
                 <p:panel id="accountsTablePanel" header="My Accounts" style="height:70%;">
-                    <p:dataTable id="checkboxDT" var="account" value="#{accountCtrl.getAccounts()}" selection="#{accountCtrl.activeAccount}" rowKey="#{account.id}" style="margin-bottom:0">
-                        <p:column selectionMode="multiple" style="width:16px;text-align:center"/>
+                    <p:dataTable id="checkboxDT" var="account" value="#{accountCtrl.getAccounts()}" selectionMode="single" selection="#{accountCtrl.activeAccount}" rowKey="#{account.id}">
                         <p:column headerText="Id">
                             <h:outputText value="#{account.id}" />
                         </p:column>
@@ -42,10 +41,12 @@
                         </h:panelGrid>
                         <p:panel id="increaseBalancePanel" header="Account Feed">
                             <h:outputText value="Increase Balance"/>
+                            <h:inputText value="#{accountCtrl.transferInfo.ammount}"/>
                             <h:commandButton action="#{accountCtrl.increaseBalance}" value="Continue"/>
                         </p:panel>
                         <p:panel id="transferPanel" header="Transfer To">
                             <h:outputText value="Transfer Balance"/>
+                            <h:inputText value="#{accountCtrl.transferInfo.ammount}"/>
                             <h:commandButton action="#{accountCtrl.transferMoney}" value="Continue"/>
                         </p:panel>
                         <p:panel id="deleteAccountPanel" header="Delete Account">

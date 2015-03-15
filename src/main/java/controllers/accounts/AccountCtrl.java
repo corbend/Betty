@@ -39,6 +39,13 @@ public class AccountCtrl {
     }
 
     private MoneyTransferInfo transferInfo = new MoneyTransferInfo("", 0.0);
+    public MoneyTransferInfo getTransferInfo() {
+        return transferInfo;
+    }
+
+    public void setTransferInfo(MoneyTransferInfo transferInfo) {
+        this.transferInfo = transferInfo;
+    }
 
 //    @Resource
 //    private SessionContext ctx;
@@ -73,8 +80,14 @@ public class AccountCtrl {
 
     public void increaseBalance() {
         //пополнение баланса
+        transferInfo.setAccountId(activeAccount.getId());
+        transferInfo.setAction("fill");
+        FacesContext.getCurrentInstance().addMessage(null,
+                new FacesMessage(FacesMessage.SEVERITY_WARN, "Money Transfer In Progress", "Wait transfer to complete!"));
         try {
             accountEJB.incrementBalance(transferInfo.getAccountId(), transferInfo.getCurrentAmmount());
+            FacesContext.getCurrentInstance().addMessage(null,
+                    new FacesMessage(FacesMessage.SEVERITY_INFO, "Money Transfer Success", "Transaction completed!"));
         } catch (JMSException e) {
             FacesContext.getCurrentInstance().addMessage(null,
                     new FacesMessage(FacesMessage.SEVERITY_ERROR, "Money Transfer", "Error - Transaction aborted!"));
@@ -82,7 +95,23 @@ public class AccountCtrl {
     }
 
     public void transferMoney() {
+        //вывод средств в платежные системы
+        transferInfo.setAccountId(activeAccount.getId());
+        transferInfo.setAction("transfer");
 
+        FacesContext.getCurrentInstance().addMessage(null,
+                new FacesMessage(FacesMessage.SEVERITY_WARN, "Money Transfer In Progress", "Wait transfer to complete!"));
+        try {
+            accountEJB.decrementBalance(transferInfo.getAccountId(), transferInfo.getCurrentAmmount());
+            FacesContext.getCurrentInstance().addMessage(null,
+                    new FacesMessage(FacesMessage.SEVERITY_INFO, "Money Transfer Success", "Transaction completed!"));
+        } catch (JMSException e) {
+            FacesContext.getCurrentInstance().addMessage(null,
+                    new FacesMessage(FacesMessage.SEVERITY_ERROR, "Money Transfer Error", "Transaction aborted!"));
+        } catch (AccountEJB.NotEnoughFundsException e) {
+            FacesContext.getCurrentInstance().addMessage(null,
+                    new FacesMessage(FacesMessage.SEVERITY_ERROR, "Money Transfer Error", "Not enough funds to proceed!"));
+        }
     }
 
     public void setActivePaymentService() {
@@ -91,8 +120,8 @@ public class AccountCtrl {
         paymentService.setProcessingPoint(ppoint);
     }
 
-    public void setActiveAccount() {
-        activeAccount = accountEJB.getAccount(transferInfo.getAccountId());
+    public void setActiveAccount(Account acc) {
+        activeAccount = acc;
     }
 
     public List<Account> getAccounts() {

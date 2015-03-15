@@ -39,6 +39,10 @@ public class UserEJB {
     public User getUser(Long id) {
         return em.find(User.class, id);
     }
+    public User getUser(String id) {
+        return em.find(User.class, id);
+    }
+
     public User getUserByName(String name) {
         User usr = null;
         try {

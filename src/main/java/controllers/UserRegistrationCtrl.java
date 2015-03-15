@@ -66,7 +66,7 @@ public class UserRegistrationCtrl implements Serializable {
         while (true) {
             ObjectMessage inputMsg = (ObjectMessage) consumer.receive();
             AccountMessage inputAccMsg = (AccountMessage) inputMsg.getObject();
-            log.fine(inputAccMsg.getStatus());
+
             String verifiedId = inputAccMsg.getEntityId();
 
             if (verifiedId == null) {
@@ -74,7 +74,6 @@ public class UserRegistrationCtrl implements Serializable {
             }
 
             if (verifiedId.equals(userName)) {
-                log.fine("Default Account for user " + user.getLogin() + "has been created");
                 return;
             }
         }

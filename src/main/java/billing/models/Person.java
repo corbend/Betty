@@ -19,6 +19,17 @@ public class Person {
     private Long documentNumber;
     private Long documentSerial;
 
+    @JoinColumn(name="account_id")
+    private Account account;
+    public Account getAccountId() {
+        return account;
+    }
+
+    public void setAccountId(Account account) {
+        this.account = account;
+    }
+
+
     @Temporal(value=TemporalType.DATE)
     private Date birthdate;
     private String password;

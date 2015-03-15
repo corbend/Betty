@@ -1,24 +1,27 @@
 package main.java.managers.bets;
 
 import main.java.managers.messages.AccountMessage;
-import main.java.managers.messages.BetPutMessage;
+import main.java.managers.service.RedisManager;
 import main.java.managers.users.UserEJB;
+import main.java.models.bets.CustomBet;
 import main.java.models.bets.LiveBet;
 import main.java.models.bets.UserBet;
-import main.java.models.games.GameShedule;
 import main.java.models.users.User;
 
-import javax.annotation.Resource;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
-import javax.jms.*;
+import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 @Stateless
 public class BetManager {
+
+    private static Logger log = Logger.getLogger(BetManager.class.getName());
 
     @PersistenceContext
     private EntityManager em;
@@ -32,23 +35,29 @@ public class BetManager {
     @EJB
     private UserEJB userEJB;
 
-    public UserBet putBet(Long userId, LiveBet liveBet, Double amount) {
+
+    public UserBet putBet(String userId, LiveBet liveBet, Double amount) {
+
+        UserBet bet = new UserBet();
         User usr = userEJB.getUser(userId);
 
         AccountMessage checkAccountMsg = new AccountMessage("ACCOUNT_DECREMENT", "BET_ACTIVATE", usr.getAccountId(), amount);
 
         //создаем новую ставку и ждем подтвреждения списания средств
-        UserBet bet = new UserBet();
+
+        bet.setUser(usr);
         bet.setLiveBet(liveBet);
         bet.setStatus(UserBet.Status.PENDING);
         bet.setAmount(amount);
+
         em.persist(bet);
 
 //        JMSProducer prod = jmsFactory.createContext().createProducer();
 //        prod.send(queue, checkAccountMsg);
 
         //после подтверждения списания средств активируем ставку
-        activateBet(bet.getId());
+        bet.setStatus(UserBet.Status.ACTIVE);
+        em.merge(bet);
 
         return bet;
     }
@@ -98,5 +107,16 @@ public class BetManager {
     public List<LiveBet> getAllLiveBets() {
         List<LiveBet> bets = em.createNamedQuery("FIND_ALL", LiveBet.class).getResultList();
         return bets;
+    }
+
+    public List<UserBet> getActiveBetsByUser(String userId) {
+
+        List<UserBet> bets = em.createNamedQuery("UserBet.getActiveByUser", UserBet.class).getResultList();
+        return bets;
+    }
+
+    public void saveCustomBet(CustomBet cbet) {
+
+        em.persist(cbet);
     }
 }

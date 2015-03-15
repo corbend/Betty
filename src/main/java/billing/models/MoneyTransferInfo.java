@@ -4,6 +4,7 @@ public class MoneyTransferInfo {
 
     private String description;
     private Double ammount;
+    private String action;
     private Long accountId;
     private String currency;
 
@@ -56,6 +57,15 @@ public class MoneyTransferInfo {
 
     public Double getCurrentAmmount() {
         return this.ammount;
+    }
+
+
+    public String getAction() {
+        return action;
+    }
+
+    public void setAction(String action) {
+        this.action = action;
     }
 
 }

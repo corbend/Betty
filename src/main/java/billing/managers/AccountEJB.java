@@ -2,6 +2,7 @@ package main.java.billing.managers;
 
 import main.java.billing.models.Account;
 import main.java.billing.models.Person;
+import main.java.billing.models.Transaction;
 import main.java.managers.messages.AccountMessage;
 
 import javax.annotation.Resource;
@@ -11,24 +12,28 @@ import javax.ejb.Stateless;
 import javax.inject.Inject;
 import javax.jms.*;
 import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 @Stateless
 //@Local(AccountLocal.class)
 public class AccountEJB {
 
-    private class NotEnoughFundsException extends Exception {
+    public class NotEnoughFundsException extends Exception {}
+    public class ServiceAccountNotFound extends Exception {}
 
-    }
-
+    private static Logger log = Logger.getLogger(AccountEJB.class.getName());
     @PersistenceContext
     protected EntityManager em;
 
     @Inject
     @JMSConnectionFactory("jms/javaee7/ConnectionFactory")
+    @JMSSessionMode(JMSContext.CLIENT_ACKNOWLEDGE)
     private JMSContext context;
     @Resource(lookup = "jms/javaee7/AccountActionQueue")
     private Queue accountQueue;
@@ -44,6 +49,20 @@ public class AccountEJB {
         return em.find(Account.class, accountId);
     }
 
+    public Account getServiceAccount() throws ServiceAccountNotFound {
+
+        Account acc = new Account();
+
+        try {
+            em.createNamedQuery("Account.getService").getSingleResult();
+        } catch (NoResultException e) {
+            acc = null;
+            throw new ServiceAccountNotFound();
+        }
+
+        return acc;
+    }
+
     public void incrementBalance(Long accountId, Double amount) throws JMSException {
 
         Account acc = em.find(Account.class, accountId);
@@ -51,15 +70,29 @@ public class AccountEJB {
         Double oldAmount = acc.getTotalAmount();
         Double newAmount = oldAmount + amount;
 
-        acc.getTotalAmount(newAmount);
+        acc.setTotalAmount(newAmount);
 
-        transactionEJB.transferToService(acc, amount);
-        //в контексте, посылаем сообщение для возможности создавать ставки
-        ObjectMessage msg = context.createObjectMessage(AccountMessage.class);
-        msg.setStringProperty("action", "ACCOUNT_INC_OK");
-        context.createProducer().send(accountQueue, msg);
+        ObjectMessage msg = context.createObjectMessage();
+        AccountMessage accMsg = new AccountMessage();
+        accMsg.setAction("ACCOUNT_INC");
+        accMsg.setAmount(amount);
+        accMsg.setAccountId(accountId);
+        msg.setObject(accMsg);
 
-        em.merge(acc);
+
+        log.log(Level.INFO, "SEND MESSAGE->" + accMsg.getAction());
+        JMSConsumer consumer = context.createConsumer(accountQueue);
+
+        context.createProducer().setDeliveryMode(DeliveryMode.PERSISTENT).send(accountQueue, msg);
+
+        while (true) {
+            ObjectMessage inMsg = (ObjectMessage) consumer.receive();
+            AccountMessage inAccMsg = (AccountMessage) inMsg.getObject();
+            if (inAccMsg.getAction().equals("ACCOUNT_INC") && inAccMsg.getStatus().equals("OK")) {
+                inMsg.acknowledge();
+                return;
+            }
+        }
     }
 
     public void decrementBalance(Long accountId, Double amount) throws NotEnoughFundsException, JMSException {
@@ -74,15 +107,29 @@ public class AccountEJB {
             throw new NotEnoughFundsException();
         }
 
-        acc.getTotalAmount(newAmount);
+        acc.setTotalAmount(newAmount);
 
-        transactionEJB.transferToService(acc, amount);
-        //в контексте, посылаем сообщение для возможности создавать ставки
-        ObjectMessage msg = context.createObjectMessage(AccountMessage.class);
-        msg.setStringProperty("action", "ACCOUNT_DEC_OK");
+        ObjectMessage msg = context.createObjectMessage();
+        AccountMessage accMsg = new AccountMessage();
+        accMsg.setAction("ACCOUNT_DEC");
+        accMsg.setAmount(amount);
+        accMsg.setAccountId(accountId);
+        msg.setObject(accMsg);
+
+        log.log(Level.INFO, "SEND MESSAGE->" + accMsg.getAction());
+        JMSConsumer consumer = context.createConsumer(accountQueue);
+
         context.createProducer().send(accountQueue, msg);
 
-        em.merge(acc);
+        while (true) {
+
+            ObjectMessage inMsg = (ObjectMessage) consumer.receive();
+            AccountMessage inAccMsg = (AccountMessage) inMsg.getObject();
+            if (inAccMsg.getAction().equals("ACCOUNT_DEC") && inAccMsg.getStatus().equals("OK")) {
+                inMsg.acknowledge();
+                return;
+            }
+        }
     }
 
     public void createAccount(Person p) {

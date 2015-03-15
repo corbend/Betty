@@ -1,34 +1,56 @@
 package main.java.models.bets;
 
 import main.java.models.abc.UserTemporal;
-import main.java.models.games.GameShedule;
+import main.java.models.games.GameEvent;
 
 import javax.persistence.*;
 import java.util.Date;
+import java.util.List;
 
-
+@Entity
 @Table(name="live_bets")
 @NamedQueries({
-        @NamedQuery(name="FIND_ALL", query="SELECT g FROM LiveBet g")
+        @NamedQuery(name="LiveBet.findAll", query="SELECT g FROM LiveBet g"),
+        @NamedQuery(name="LiveBet.findBetsForEvent", query="SELECT g FROM LiveBet g WHERE g.gameEvent=:gameEvent")
 })
-public class LiveBet extends UserTemporal {
+public class LiveBet {
 
     //модель живых ставок
     @Id
     @GeneratedValue
-    private Integer id;
+    private Long id;
 
     private String type;
 
-    private Double coeficcient;
+    private Double coefficient;
+
+    @Transient
+    private Date lastChange;
+
+    @Transient
+    private Double funds;
+    public Double getFunds() {
+        return funds;
+    }
+
+    public void setFunds(Double funds) {
+        this.funds = funds;
+    }
 
     @OneToOne
-    @JoinColumn(name="shedule_id")
-    private GameShedule shedule;
+    @JoinColumn(name="game_event_id")
+    private GameEvent gameEvent;
 
-    @OneToMany
-    @JoinColumn(name="user_bet_id")
-    private UserBet userBet;
+    @OneToMany(mappedBy = "liveBet")
+    private List<UserBet> userBets;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getType() {
         return type;
@@ -42,19 +64,36 @@ public class LiveBet extends UserTemporal {
         return type;
     }
 
-    public void setShedule(GameShedule v) {
-        shedule = v;
+    public void setGameEvent(GameEvent v) {
+        gameEvent = v;
     }
 
-    public GameShedule getShedule() {
-        return shedule;
+    public GameEvent getGameEvent() {
+        return gameEvent;
     }
 
-    public void setСoeficcient(Double v) {
-        coeficcient = v;
+    public void setCoefficient(Double v) {
+        coefficient = v;
     }
 
-    public Double getСoeficcient() {
-        return coeficcient;
+    public Double getCoefficient() {
+        return coefficient;
     }
+
+    public List<UserBet> getUserBets() {
+        return userBets;
+    }
+
+    public void setUserBet(List<UserBet> userBets) {
+        this.userBets = userBets;
+    }
+
+    public Date getLastChange() {
+        return lastChange;
+    }
+
+    public void setLastChange(Date lastChange) {
+        this.lastChange = lastChange;
+    }
+
 }

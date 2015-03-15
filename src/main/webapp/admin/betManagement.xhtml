@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:pt="http://xmlns.jcp.org/jsf/passthrough"
+      xmlns:jsf="http://xmlns.jcp.org/jsf"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<h:head>
+    <ui:define><title>Bet Management Panel</title></ui:define>
+</h:head>
+<h:body>
+    <ui:composition template="/layout.xhtml">
+        <ui:define name="content">
+            <h:form id="globalForm">
+                <p:panel header="Bets Admin Menu" style="width:300px; position: absolute; left: 0; top: 0; bottom: 0;">
+                    <p:panelMenu style="width: 100%; height: 100%;">
+                        <p:submenu label="Events">
+                            <p:menuitem value="Show All" actionListener="#{betAdminMenuCtrl.showAll}"/>
+                            <p:menuitem value="Search" actionListener="#{betAdminMenuCtrl.showSearchPanel}"/>
+                            <p:menuitem value="Dashboards" actionListener="#{betAdminMenuCtrl.showDashboards}"/>
+                        </p:submenu>
+                        <p:submenu label="Bet Groups">
+                            <p:menuitem value="Create" actionListener="#{betAdminMenuCtrl.createNewBetGroup}"/>
+                            <p:menuitem value="Manage" actionListener="#{betAdminMenuCtrl.manageBetGroups}"/>
+                        </p:submenu>
+                        <p:submenu label="Bets Assignments">
+                            <p:menuitem value="Assign To Event" actionListener="#{betAdminMenuCtrl.assignBetToEvent}"/>
+                            <p:menuitem value="Show Tables" actionListener="#{betAdminMenuCtrl.showAllTables}"/>
+                        </p:submenu>
+                        <p:submenu label="Assistant">
+                            <p:menuitem value="Margin Calculator" actionListener="#{betAdminMenuCtrl.showMarginCalculator}"/>
+                            <p:menuitem value="Shurebets Analyzer" actionListener="#{betAdminMenuCtrl.showSurebetsAnalyzer}"/>
+                        </p:submenu>
+                    </p:panelMenu>
+                </p:panel>
+                <div class="status_bar">
+                    <p:growl id="globalMsgs" showDetail="true"/>
+                </div>
+                <div id="contentWrapper" class="content-wrapper" style="position: absolute; left:320px; bottom: 0; top: 20px; right: 20px;">
+
+                    <p:panel header="Events Panel" style="margin-bottom: 20px;">
+                        <!--<h:form id="eventsForm">-->
+                            <p:growl id="event_messages"/>
+                            <p:dataTable id="eventsTable" var="gameEvent" selectionMode="single" value="#{betManageCtrl.events}" selection="#{betGroupTableCtrl.selectedGameEvent}" rowKey="#{gameEvent.id}">
+                                <f:facet name="header">
+                                    <h:outputText value="Date From"/>
+                                    <p:calendar id="eventDateStart" value="#{betManageCtrl.scheduleStartDate}" style="display:inline-block;">
+                                        <p:ajax event="dateSelect" listener="#{betManageCtrl.onDateStartSelect}" update="eventsTable" />
+                                    </p:calendar>
+                                    <h:outputText value="Date To"/>
+                                    <p:calendar id="eventDateEnd" value="#{betManageCtrl.scheduleEndDate}" style="display:inline-block;">
+                                        <p:ajax event="dateSelect" listener="#{betManageCtrl.onDateEndSelect}" update="eventsTable" />
+                                    </p:calendar>
+                                </f:facet>
+                                <p:ajax event="rowSelect" listener="#{betGroupTableCtrl.onSelectGameEvent}" update=":globalForm:event_messages :globalForm:betsGroupPanel :globalForm:liveBetsPanel"/>
+                                <p:ajax event="rowSelect" listener="#{liveBetsTableView.onSelectEvent}" update=":globalForm:liveBetsPanel"/>
+
+                                <p:column headerText="Event Id">
+                                    <h:outputText value="#{gameEvent.id}" />
+                                </p:column>
+                                <p:column headerText="Event Name">
+                                    <h:outputText value="#{gameEvent.game.name}" />
+                                </p:column>
+                                <p:column headerText="Event Time">
+                                    <h:outputText value="#{gameEvent.eventTime}" />
+                                </p:column>
+                                <p:column headerText="Event Location">
+                                    <h:outputText value="#{gameEvent.eventLocation}" />
+                                </p:column>
+                                <p:column headerText="Team 1 Name">
+                                    <h:outputText value="#{gameEvent.team1Name}" />
+                                </p:column>
+                                <p:column headerText="Team 2 Name">
+                                    <h:outputText value="#{gameEvent.team2Name}" />
+                                </p:column>
+                                <f:facet name="footer">
+                                    <p:commandButton process="eventsTable" value="Refresh"/>
+                                </f:facet>
+                            </p:dataTable>
+                        <!--</h:form>-->
+                    </p:panel>
+                    <div  id="betsGroupPanelWrapper" style="position: relative; width: 100%; margin-right: 20px">
+                        <p:panel id="betsGroupPanel" header="Bet Group Panel" style="width: 48%; float:left; margin-bottom: 20px;">
+
+                            <p:growl id="bet_messages"/>
+                            <p:dataTable id="betsGroupTable" var="custombet" value="#{betGroupTableCtrl.betGroupBets}" selection="#{betGroupTableCtrl.selectedCustomBet}" rowKey="#{custombet.id}">
+                                <p:column selectionMode="single" style="width:16px;text-align:center"/>
+                                <p:column headerText="Description">
+                                    <h:outputText value="#{custombet.description}" />
+                                </p:column>
+                                <p:column headerText="Type">
+                                    <h:outputText value="#{custombet.betTypeString}" />
+                                </p:column>
+                                <p:column headerText="Expression">
+                                    <h:outputText value="#{custombet.expression}" />
+                                </p:column>
+                                <p:column headerText="Coefficient">
+                                    <h:outputText value="#{custombet.coefficient}" />
+                                </p:column>
+                            </p:dataTable>
+                            <p:commandButton actionListener="#{betGroupTableCtrl.createNewGroup}" disabled="#{!betGroupTableCtrl.createAllowed}" update="betsGroupTable bet_messages" value="Create New Group"/>
+                            <p:commandButton actionListener="#{betGroupTableCtrl.saveChangesInGroup}" disabled="#{betGroupTableCtrl.noGroup}" update="bet_messages" value="Update Group"/>
+                            <p:commandButton actionListener="#{betGroupTableCtrl.removeBetFromGroup}" disabled="#{betGroupTableCtrl.noGroup}" update="bet_messages" value="Remove From Group"/>
+                            <p:commandButton actionListener="#{betGroupTableCtrl.activateGroup}" disabled="#{betGroupTableCtrl.noGroup}" update="bet_messages :globalForm:liveBetsPanel" value="Activate Group"/>
+
+                        </p:panel>
+
+                        <div class="side-right" style="width: 48%; float:left; clear: left;">
+                            <h:form id="createCustomBetForm">
+                                <p:growl id="custom_bet_messages" life="2000"/>
+                                <div class="row">
+                                    <p:panel header="Create Custom Bet" style="height: 40%; margin-bottom: 20px;">
+                                        <h:panelGrid columns="2">
+                                            <h:outputLabel value="Description"/>
+                                            <h:inputText value="#{customBetViewCtrl.newCustomBet.description}"/>
+                                            <h:outputLabel value="Base Coefficient"/>
+                                            <h:inputText value="#{customBetViewCtrl.newCustomBet.coefficient}"/>
+                                            <p:outputLabel value="Bet Type" />
+                                            <p:selectOneMenu value="#{customBetViewCtrl.newCustomBet.betTypeString}">
+                                                <f:selectItem itemLabel="Select One" itemValue="" />
+                                                <f:selectItems value="#{customBetViewCtrl.betTypesStandartOptions}" />
+                                            </p:selectOneMenu>
+                                        </h:panelGrid>
+                                        <h:commandButton action="#{customBetViewCtrl.createNewBet}" value="Create New Bet">
+                                                <f:ajax execute="@form" render="betsTable custom_bet_messages"/>
+                                        </h:commandButton>
+                                        <p:commandButton actionListener="#{customBetViewCtrl.createNewBet}" update="betsTable custom_bet_messages" value="Create New Bet"/>
+                                    </p:panel>
+                                </div>
+                                <div class="row">
+                                    <p:panel header="Bets List" style="height: 50%">
+                                        <p:dataTable id="betsTable" var="bet" value="#{betManageCtrl.getAllCustomBets()}" selectionMode="single" selection="#{betGroupTableCtrl.selectedBet}" rowKey="#{bet.id}">
+
+                                            <p:column headerText="Bet Id">
+                                                <h:outputText value="#{bet.id}" />
+                                            </p:column>
+                                            <p:column headerText="Bet Description">
+                                                <h:outputText value="#{bet.description}" />
+                                            </p:column>
+                                            <p:column headerText="Bet Base Coefficient">
+                                                <h:outputText value="#{bet.coefficient}" />
+                                            </p:column>
+                                        </p:dataTable>
+                                        <p:commandButton actionListener="#{betGroupTableCtrl.addBetToGroup}" update=":globalForm:bet_messages :globalForm:betsGroupPanel" value="Add To Group"/>
+                                    </p:panel>
+                                </div>
+                            </h:form>
+                        </div>
+
+                        <p:panel id="liveBetsPanel" header="Live Bets Panel" style="width: 48%; float:right; margin-bottom: 20px;">
+                            <p:dataTable id="liveBetsTable" var="liveBet" selectionMode="single" value="#{liveBetsTableView.bets}" selection="#{liveBetsTableView.selectedLiveBet}" rowKey="#{liveBet.id}">
+                                <f:facet name="header">
+
+                                </f:facet>
+                                <p:ajax event="rowSelect" listener="#{liveBetsTableView.onSelectEvent}"/>
+
+                                <p:column headerText="Bet Id">
+                                    <h:outputText value="#{liveBet.id}" />
+                                </p:column>
+                                <p:column headerText="Type">
+                                    <h:outputText value="#{liveBet.type}" />
+                                </p:column>
+                                <p:column headerText="Coefficient">
+                                    <h:outputText value="#{liveBet.coefficient}" />
+                                </p:column>
+                                <p:column headerText="Total Active Funds">
+                                    <h:outputText value="#{liveBet.funds}" />
+                                </p:column>
+                                <f:facet name="footer">
+                                    <p:commandButton process="liveBetsTable" value="Refresh"/>
+                                    <p:commandButton process="liveBetsTable" action="#{liveBetsTableView.resolve}" disable="#{!liveBetsTableView.allowResolve}" value="Resolve"/>
+                                    <p:commandButton process="liveBetsTable" action="#{liveBetsTableView.freeze}" disable="#{liveBetsTableView.isFreeze}" value="Freeze"/>
+                                </f:facet>
+                            </p:dataTable>
+                        </p:panel>
+                    </div>
+                </div>
+            </h:form>
+        </ui:define>
+    </ui:composition>
+</h:body>
+</html>

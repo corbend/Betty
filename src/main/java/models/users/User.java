@@ -1,5 +1,7 @@
 package main.java.models.users;
 
+import main.java.models.bets.UserBet;
+
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -30,8 +32,10 @@ public class User implements Serializable {
     }
 
     @OneToMany(cascade = CascadeType.PERSIST)
-    @JoinColumn(name="user_name")
     private List<UserGroup> groups;
+
+    @OneToMany(cascade = CascadeType.PERSIST, mappedBy = "user")
+    private List<UserBet> userBets;
 
     private Long accountId;
 
@@ -140,5 +144,13 @@ public class User implements Serializable {
 
     public void setName(String v) {
         name = v;
+    }
+
+    public List<UserBet> getUserBets() {
+        return userBets;
+    }
+
+    public void setUserBets(List<UserBet> userBets) {
+        this.userBets = userBets;
     }
 }

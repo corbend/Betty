@@ -1,6 +1,7 @@
 package main.java.billing.beans;
 
 import main.java.billing.managers.AccountEJB;
+import main.java.billing.managers.TransactionEJB;
 import main.java.billing.models.Account;
 import main.java.managers.messages.AccountMessage;
 
@@ -8,8 +9,12 @@ import javax.annotation.Resource;
 import javax.ejb.ActivationConfigProperty;
 import javax.ejb.EJB;
 import javax.ejb.MessageDriven;
+import javax.ejb.MessageDrivenContext;
 import javax.inject.Inject;
 import javax.jms.*;
+import javax.security.auth.login.AccountLockedException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @MessageDriven(
     mappedName="jms/javaee7/AccountActionQueue",
@@ -28,8 +33,24 @@ public class AccountActionMDB implements MessageListener {
     @Resource(lookup = "jms/javaee7/AccountActionQueue")
     private Queue accountQueue;
 
+    private static Logger log = Logger.getLogger(AccountActionMDB.class.getName());
+
     @EJB
     private AccountEJB accountEJB;
+
+    @EJB
+    private TransactionEJB transactionEJB;
+
+    private void returnWithStatus(AccountMessage inputMsg, String status) throws JMSException {
+
+        AccountMessage outputMsg = new AccountMessage();
+        outputMsg.setAction(inputMsg.getAction());
+        outputMsg.setEntityId(inputMsg.getEntityId());
+        outputMsg.setStatus(status);
+        ObjectMessage outMsg = context.createObjectMessage();
+        outMsg.setObject(outputMsg);
+        context.createProducer().send(accountQueue, outMsg);
+    }
 
     @Override
     public void onMessage(Message msg) {
@@ -37,20 +58,35 @@ public class AccountActionMDB implements MessageListener {
         try {
 
             AccountMessage inputMsg = (AccountMessage) ((ObjectMessage) msg).getObject();
+            log.log(Level.INFO, "GET MESSAGE->" + inputMsg.getAction());
+            String msgAction = inputMsg.getAction();
 
-            if (inputMsg.getAction().equals("CREATE_DEFAULT")) {
-                String userEntityId = inputMsg.getEntityId();
-                accountEJB.createDefaultAccount(userEntityId);
-                AccountMessage outputMsg = new AccountMessage();
-                outputMsg.setAction(inputMsg.getAction());
-                outputMsg.setEntityId(userEntityId);
-                outputMsg.setStatus("OK");
-                ObjectMessage outMsg = context.createObjectMessage();
-                outMsg.setObject(outputMsg);
-                context.createProducer().send(accountQueue, outMsg);
+            switch(msgAction) {
+                case "CREATE_DEFAULT":
+                    String userEntityId = inputMsg.getEntityId();
+                    accountEJB.createDefaultAccount(userEntityId);
+                    msg.acknowledge();
+                    returnWithStatus(inputMsg, "OK");
+                    break;
+
+                case "ACCOUNT_INC":
+                    log.log(Level.INFO, "GET MESSAGE->" + inputMsg.getAction());
+                    Account destAccount = accountEJB.getAccount(inputMsg.getAccountId());
+                    transactionEJB.createChangeTransaction(null, destAccount, inputMsg.getAmount());
+                    msg.acknowledge();
+                    returnWithStatus(inputMsg, "OK");
+                    break;
+
+                case "ACCOUNT_DEC":
+                    log.log(Level.INFO, "GET MESSAGE->" + inputMsg.getAction());
+                    Account srcAccount = accountEJB.getAccount(inputMsg.getAccountId());
+                    transactionEJB.createChangeTransaction(srcAccount, null, inputMsg.getAmount());
+                    msg.acknowledge();
+                    returnWithStatus(inputMsg, "OK");
+                    break;
             }
 
-        } catch(JMSException e) {
+        } catch(JMSException | AccountLockedException e) {
             e.printStackTrace();
         }
 
