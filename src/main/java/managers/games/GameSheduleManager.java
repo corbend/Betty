@@ -13,6 +13,7 @@ import javax.persistence.TypedQuery;
 import java.util.*;
 
 
+import org.joda.time.DateTime;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -22,11 +23,6 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 @Stateless
 public class GameSheduleManager {
-
-    private String url = "http://espn.go.com/travel/sports/calendar/";
-
-    //@Resource
-    //private TimerService timerService;
 
     @Resource
     private SessionContext context;
@@ -46,26 +42,19 @@ public class GameSheduleManager {
         String requestMonth = StringUtils.right("0" + cDate.get(Calendar.MONTH), 2);
         String requestDay = StringUtils.right("0" + cDate.get(Calendar.DAY_OF_MONTH), 2);
 
-        url += "?date=" + requestYear + requestMonth + requestDay;
-        url += "&type=list";
-
-        System.out.println("PARSE URL=" + url);
-
         return shedules;
+    }
+
+    public List<GameEvent> getAllTodaySchedules() {
+
+        return em.createNamedQuery("GameEvent.getForPreciseDate", GameEvent.class)
+                .setParameter("dateStart", new Date()).setParameter("dateEnd",
+                        DateTime.now().plusDays(1).withHourOfDay(0).toDate()).getResultList();
     }
 
     public void createTimer(Game game, Calendar cl) {
         TimerService ts = context.getTimerService();
         ts.createTimer(cl.getTime(), game);
-    }
-
-    //@Timeout
-    public void onShedule(Timer timer) {
-
-        System.out.println("TIMER EXPIRED->");
-        Calendar cl = new GregorianCalendar();
-        System.out.println("GET SHEDULE FOR->" + cl);
-        getAvailableShedules((Game) timer.getInfo(), cl.get(Calendar.MONTH), cl.get(Calendar.DAY_OF_MONTH), cl.get(Calendar.YEAR));
     }
 
     public List<GameEvent> getSavedShedulesForGame(Game game, Date sheduleDate) {

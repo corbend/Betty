@@ -99,26 +99,30 @@ public class ScheduleParser implements Serializable {
     public Proxy createProxy() {
         return new Proxy(this);
     }
-//    @Transient
-//    private Boolean complete;
-    //@Transient
-    //private DateTime lastCompleteTime;
 
-    //public DateTime getLastCompleteTime() {
-     //   return lastCompleteTime;
-    //}
+    @Transient
+    private Boolean complete;
+    @Transient
+    private Date lastCompleteTime;
 
-//    public void setLastCompleteTime(DateTime lastCompleteTime) {
-//        this.lastCompleteTime = lastCompleteTime;
-//    }
+    public DateTime getLastCompleteTime() {
+        return new DateTime(lastCompleteTime);
+    }
 
-//    public Boolean isComplete() {
-//        return complete;
-//    }
-//
-//    public void setComplete(Boolean complete) {
-//        this.complete = complete;
-//    }
+    public void setLastCompleteTime(Date lastCompleteTime) {
+        this.lastCompleteTime = lastCompleteTime;
+    }
+    public void setLastCompleteTime(DateTime lastCompleteTime) {
+        this.lastCompleteTime = lastCompleteTime.toDate();
+    }
+
+    public Boolean isComplete() {
+        return complete;
+    }
+
+    public void setComplete(Boolean complete) {
+        this.complete = complete;
+    }
 
     public Long getId() {
         return id;

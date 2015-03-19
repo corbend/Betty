@@ -5,12 +5,17 @@ import main.java.models.bets.BetGroup;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Table(name="game_events")
 @NamedQueries({
-        @NamedQuery(name="GameEvent.getForDate", query="SELECT a FROM GameEvent a WHERE a.dateStart = :date"),
-        @NamedQuery(name="GameEvent.getForInterval", query="SELECT a FROM GameEvent a WHERE a.dateStart BETWEEN :dateStart AND :dateEnd")
+        @NamedQuery(name="GameEvent.getForDate",
+                query="SELECT a FROM GameEvent a WHERE a.dateStart = :date"),
+        @NamedQuery(name="GameEvent.getForInterval",
+                query="SELECT a FROM GameEvent a WHERE a.dateStart BETWEEN :dateStart AND :dateEnd"),
+        @NamedQuery(name="GameEvent.getForPreciseDate",
+                query="SELECT a FROM GameEvent a WHERE a.dateStart > :dateStart AND a.dateEnd < :dateEnd")
 })
 public class GameEvent implements Serializable {
 
@@ -77,6 +82,11 @@ public class GameEvent implements Serializable {
     @Temporal(value=TemporalType.DATE)
     private Date dateEnd;
 
+    @Transient
+    private List<Integer> scores1;
+
+    @Transient
+    private List<Integer> scores2;
 
     public String getEventName() {
         return eventName;
@@ -142,4 +152,17 @@ public class GameEvent implements Serializable {
         this.status = status;
     }
 
+    public List<Integer> getScores1() {
+        return scores1;
+    }
+    public void setScores1(List<Integer> scores) {
+        this.scores1 = scores;
+    }
+
+    public List<Integer> getScores2() {
+        return scores2;
+    }
+    public void setScores2(List<Integer> scores) {
+        this.scores2 = scores;
+    }
 }

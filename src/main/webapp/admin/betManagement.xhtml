@@ -60,8 +60,11 @@
                                 <p:column headerText="Event Id">
                                     <h:outputText value="#{gameEvent.id}" />
                                 </p:column>
-                                <p:column headerText="Event Name">
+                                <p:column headerText="Game Type">
                                     <h:outputText value="#{gameEvent.game.name}" />
+                                </p:column>
+                                <p:column headerText="Event Name">
+                                    <h:outputText value="#{gameEvent.eventName}" />
                                 </p:column>
                                 <p:column headerText="Event Time">
                                     <h:outputText value="#{gameEvent.eventTime}" />

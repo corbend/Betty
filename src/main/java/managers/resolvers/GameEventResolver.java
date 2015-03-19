@@ -23,6 +23,8 @@ import javax.jms.*;
 import javax.jms.Queue;
 import java.io.Serializable;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @MessageDriven(
         mappedName="jms/javaee7/EventsActionQueue",
@@ -34,13 +36,13 @@ import java.util.*;
                         propertyValue = "EventsActionQueue")
         }
 )
-@Stateless
 public class GameEventResolver implements MessageListener {
 /**
  * примитивный резолвер, который проверяет окончание игры и рассылает сообщения через JMS об окончании игры и результаты
  * 1) опрашиваем REDIS каждую минуту и берем список игр, запланированных на определенное время
  * 2)
  */
+    private Logger log = Logger.getAnonymousLogger();
 
     @EJB
     private LiveBetsManager liveBetsManager;
@@ -54,6 +56,7 @@ public class GameEventResolver implements MessageListener {
     @EJB
     private GameManager gameManager;
 
+    @Inject
     private RedisManager<GameEvent> gameEventPoolManager;
 
     @Inject
@@ -81,28 +84,39 @@ public class GameEventResolver implements MessageListener {
         }
     }
 
-    //@Schedule(minute="*")
+    @Schedule(second="*/30")
     public void checkAllEndedEvents() throws JMSException {
 
         //проверяем завершенность всех матчей
         curDate = new Date();
         curDate.setSeconds(0);
 
-        List<GameEvent> gameEvents = gameEventPoolManager.getRange(Long.toString(curDate.getTime()), 0, -1);
+        List<GameEvent> gameEvents = gameEventPoolManager.getRange("GameEvent", 0, -1);
 
-        if (gameEvents != null) {
+        if (gameEvents == null) {
+            log.log(Level.SEVERE, "Event Results not found!");
+            return;
+        } else {
             for (GameEvent event: gameEvents) {
-                ObjectMessage msg = context.createObjectMessage();
 
-                //TODO - сделать правильный чек результата
-                int score1 = new Random(1L).nextInt();
-                int score2 = new Random(1L).nextInt();
-                msg.setObject(new GameEventMessage(event, score1, score2));
-                context.createProducer().send(eventsQueue, msg);
+                GameEvent inMemoryGame = gameEventPoolManager.get(event.getId().toString());
+                //наличие по данному ключу данных, означает окончание игры
+                if (inMemoryGame == null) {
+                    log.log(Level.WARNING, "Event:" + event.toString() + "in progress.");
+                } else {
+                    ObjectMessage msg = context.createObjectMessage();
+
+                    int score1 = inMemoryGame.getScores1().get(0);
+                    int score2 = inMemoryGame.getScores2().get(0);
+
+                    msg.setObject(new GameEventMessage(event, score1, score2));
+                    log.log(Level.WARNING, "Event:" + event.toString() + "finished.");
+                    context.createProducer().send(eventsQueue, msg);
+                }
             }
         }
 
-        extractToPool();
+        //extractToPool();
     }
 
     private void setBetsToResolve(GameEvent gameEvent, GameEventMessage msg) {

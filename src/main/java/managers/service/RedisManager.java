@@ -2,6 +2,10 @@ package main.java.managers.service;
 
 import com.cedarsoftware.util.io.JsonWriter;
 import main.java.models.sys.ScheduleParser;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
@@ -56,6 +60,39 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
         }
     }
 
+    public void setRawKey(String key, Object item) {
+        if (inCluster) {
+            cluster.set(key, item.toString());
+        } else {
+            client.set(key, item.toString());
+        }
+    }
+
+    public Object getRawKey(String key) {
+        if (inCluster) {
+            return cluster.get(key);
+        } else {
+            return client.get(key);
+        }
+    }
+
+    public void pushDateList(String key, DateTime item) {
+        String dateString = item.toString(DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss"));
+        if (inCluster) {
+            cluster.lpush(key, dateString);
+        } else {
+            client.lpush(key, dateString);
+        }
+    }
+
+    public DateTime popDate(String key) {
+        if (inCluster) {
+            return DateTime.parse(cluster.rpop(key));
+        } else {
+            return DateTime.parse(client.rpop(key));
+        }
+    }
+
     public void addList(String key, List<T> list) {
 
         if (inCluster) {
@@ -65,23 +102,16 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
         }
 
         for (T l: list) {
-            log.log(Level.INFO, "Model fields=" + l.getClass().getDeclaredFields().toString());
-            log.log(Level.INFO, "Model to Redis=" + l.toString());
             try {
-                ScheduleParser.Proxy proxy = (ScheduleParser.Proxy) l.getClass().getMethod("createProxy").invoke(l);
-                Long entityId = (Long) l.getClass().getMethod("getId").invoke(l);
-                log.log(Level.INFO, "Model Proxy=" + proxy.toString());
                 //FIXME - есть проблема конвертации в JSON внутри контейнера
-                //пока кладем в редис idшники, хотя это лишено смысла
-                //MemoryObject t = new MemoryObject<>(proxy);
                 String toPush = new MemoryObject<>(l).toString();
                 if (inCluster) {
                     cluster.lpush(key, toPush);
                 } else {
                     client.lpush(key, toPush);
                 }
-            } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-                log.log(Level.INFO, e.getMessage());
+            } catch (Exception e) {
+                log.log(Level.SEVERE, e.getMessage());
             }
         }
     }

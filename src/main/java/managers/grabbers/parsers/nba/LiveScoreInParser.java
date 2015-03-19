@@ -4,9 +4,8 @@ import main.java.managers.service.RedisManager;
 import main.java.models.games.Game;
 import main.java.models.games.GameEvent;
 import main.java.models.sys.ScheduleParser;
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
+import org.joda.time.DateTime;
+import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
@@ -23,6 +22,7 @@ import javax.persistence.PersistenceContext;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
+import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -33,11 +33,9 @@ public class LiveScoreInParser extends EventParser {
         super();
     }
 
-    @PersistenceContext
-    private EntityManager em;
-
     private Logger log = Logger.getLogger(LiveScoreInParser.class.getName());
     private String url = "http://www.livescore.in/ru/";
+    private DateTime parsedDate;
 
     @Inject
     private RedisManager<GameEvent> redisManager;
@@ -63,14 +61,8 @@ public class LiveScoreInParser extends EventParser {
                     gameEvent.setTeam1Name(teamName);
                     gameEvent.setEventTime(eventTime);
                     gameEvent.setStatus(eventStatus);
-                    gameEvent.setDateStart(new Date());
-                    gameEvent.setDateEnd(new Date());
                 } else {
                     gameEvent.setTeam2Name(teamName);
-                }
-
-                if (gameEvent == null) {
-                    log.log(Level.SEVERE, "No game event provided!");
                 }
 
                 c++;
@@ -80,13 +72,106 @@ public class LiveScoreInParser extends EventParser {
         return teamInfoRows;
     }
 
+    private void clickAndParseDateMenu(WebDriver driver) {
+
+        WebElement dateMenuContent;
+
+        try {
+            dateMenuContent = driver.findElement(By.id("ifmenu-calendar-content"));
+        } catch (org.openqa.selenium.NoSuchElementException e) {
+
+            WebElement dateMenuHeader = driver.findElement(By.id("ifmenu-calendar")).findElement(By.tagName("a"));
+            dateMenuHeader.click();
+
+            (new WebDriverWait(driver, 10)).until(new ExpectedCondition<Boolean>() {
+                public Boolean apply(WebDriver d) {
+
+                    List<WebElement> testElement = d.findElements(By.id("ifmenu-calendar-content"));
+
+                    return !testElement.isEmpty();
+                }
+            });
+
+            dateMenuContent = driver.findElement(By.id("ifmenu-calendar-content"));
+        }
+
+        List<WebElement> datesToWatch = dateMenuContent.findElements(By.tagName("a"));
+
+        for (WebElement dateLink: datesToWatch) {
+            String dateText = dateLink.getText();
+            String normDateText = dateText.substring(0, dateText.length() - 3);
+            String dateString = "";
+            String monthString = "";
+
+            try {
+                dateString = normDateText.split("\\/")[0];
+                monthString = normDateText.split("\\/")[1];
+            } catch (ArrayIndexOutOfBoundsException e) {
+
+                continue;
+            }
+            String formatedDate = parsedDate.getYear() + "-" + monthString + "-" + dateString;
+            DateTime date = DateTime.parse(formatedDate);
+
+            if (    date.getMonthOfYear() == parsedDate.getMonthOfYear() &&
+                    date.getDayOfMonth() == parsedDate.getDayOfMonth()) {
+
+                //мы и так уже находимся на текущей дате
+
+                if (dateLink.getAttribute("class").contains("ifmenu-today")) {
+                    continue;
+                }
+
+                dateLink.click();
+
+                new WebDriverWait(driver, 30).until(new ExpectedCondition<Boolean>() {
+                    public Boolean apply(WebDriver d) {
+                        try {
+
+                            WebElement body = d.findElement(By.tagName("body"));
+                            WebElement dateMenu = body.findElement(By.id("ifmenu-calendar"));
+                            WebElement dateTodayItem = dateMenu.findElement(By.className("today"));
+                            WebElement dateTodayLink = dateTodayItem.findElement(By.tagName("a"));
+
+                            String dateTodayText = dateTodayLink.getText();
+
+                            int testDay = parsedDate.getDayOfMonth();
+                            String testDayString = Integer.toString(testDay);
+                            int testMonth = parsedDate.getMonthOfYear();
+                            String testMonthString = Integer.toString(testMonth);
+
+                            if (testDayString.length() == 1) {
+                                testDayString = "0" + testDayString;
+                            }
+
+                            if (testMonthString.length() == 1) {
+                                testMonthString = "0" + testMonthString;
+                            }
+                            String matchText = testDayString + "/" + testMonthString;
+
+                            return dateTodayText.substring(0, dateTodayText.length() - 3)
+                                    .equals(matchText);
+
+                        } catch (StaleElementReferenceException e) {
+                            return false;
+                        }
+                    }
+                });
+
+                break;
+            }
+        }
+
+    }
+
     private List<GameEvent> basketballParser(String gameName) {
         //костыль (нужно понять почему не инжектится зависимость
 
         redisManager = new RedisManager<>("localhost", 6379, "GameEvent");
+        WebDriver driver = null;
 
         try {
-            WebDriver driver = new RemoteWebDriver(new URL("http://localhost:9515"), DesiredCapabilities.chrome());
+            driver = new RemoteWebDriver(new URL("http://localhost:9515"), DesiredCapabilities.chrome());
             driver.get(url);
 
             (new WebDriverWait(driver, 10)).until(new ExpectedCondition<Boolean>() {
@@ -97,34 +182,61 @@ public class LiveScoreInParser extends EventParser {
                     return !tableElements.isEmpty();
                 }
             });
+
+            //найдем в пункте меню, нужный заданной дате пункт и сделаем щелчок мышью на нем
+            //дальше нужно подождать отрисовки страницы
+            if (parsedDate != null) {
+                clickAndParseDateMenu(driver);
+            }
+
             WebElement rootTable = driver.findElement(By.className(rootClass));
+
             List<WebElement> tableElements = rootTable.findElements(By.className("basketball"));
             List<GameEvent> shedules = new ArrayList<>();
 
-            for (WebElement elem: tableElements) {
+                for (WebElement elem : tableElements) {
 
-                //parse header
-                WebElement header = elem.findElement(By.className("head_ab"));
-                String eventLocation = header.findElement(By.className("country_part")).getText();
-                String eventName = header.findElement(By.className("tournament_part")).getText();
-                GameEvent newGameEvent = new GameEvent();
-                newGameEvent.setEventName(eventName);
-                newGameEvent.setEventLocation(eventLocation);
-                //parse teams
-                List<WebElement> teamInfoRows = parseGameStat("live", newGameEvent, elem);
-                //TODO - parse scheduled
-                if (teamInfoRows.size() > 0) {
-                    shedules.add(newGameEvent);
+                    //parse header
+                    WebElement header = elem.findElement(By.className("head_ab"));
+                    String eventLocation = header.findElement(By.className("country_part")).getText();
+                    String eventName = header.findElement(By.className("tournament_part")).getText();
+                    GameEvent newGameEvent = new GameEvent();
+                    newGameEvent.setEventName(eventName);
+                    newGameEvent.setEventLocation(eventLocation);
+                    newGameEvent.setDateStart(parsedDate.toDate());
+                    newGameEvent.setDateEnd(parsedDate.toDate());
+
+                    //parse teams
+                    List<WebElement> teamInfoRows = parseGameStat("scheduled", newGameEvent, elem);
+                    List<WebElement> teamLiveInfoRows = parseGameStat("live", newGameEvent, elem);
+                    //пока существует только для тестирования
+                    List<WebElement> teamFinishedInfoRows = parseGameStat("finished", newGameEvent, elem);
+                    //TODO - parse scheduled
+                    if (teamInfoRows.size() > 0 || teamLiveInfoRows.size() > 0 || teamFinishedInfoRows.size() > 0) {
+                        shedules.add(newGameEvent);
+                    }
+
+                    log.log(Level.INFO, "SCHEDULED GAME EVENT PARSED->" +
+                                    newGameEvent.getEventName() + ", " +
+                                    newGameEvent.getEventLocation() + "," +
+                                    newGameEvent.getTeam1Name() + "," +
+                                    newGameEvent.getTeam2Name() + "."
+
+                    );
                 }
-            }
 
-            redisManager.addList("GameEvents", shedules);
+            redisManager.addList("GameEvent", shedules);
 
             log.log(Level.INFO, "Game Schedule ->" + gameName + "->PARSE=OK");
+
             return shedules;
         } catch (MalformedURLException | NoSuchElementException e) {
             log.log(Level.SEVERE, e.getStackTrace().toString());
             return new ArrayList<>();
+        } finally {
+            if (driver != null) {
+                driver.quit();
+            }
         }
 
     }
@@ -144,7 +256,10 @@ public class LiveScoreInParser extends EventParser {
 
     public List<GameEvent> parse(Game game, int forYear, int forMonth, int forDate) {
 
+        parsedDate = new DateTime(forYear, forMonth, forDate, 0, 0, 0);
         List<GameEvent> ls = parseFor(game.getName());
+        getPersistenceParser().setLastCompleteTime(DateTime.now());
+        getPersistenceParser().setComplete(true);
 
         return ls;
     }

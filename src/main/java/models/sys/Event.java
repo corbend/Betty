@@ -17,6 +17,13 @@ public class Event implements Serializable {
     @Temporal(TemporalType.DATE)
     private Date date;
 
+    public Event() {}
+
+    public Event(Date date, String description) {
+        this.date = date;
+        this.description = description;
+    }
+
     public Long getId() {
         return id;
     }
