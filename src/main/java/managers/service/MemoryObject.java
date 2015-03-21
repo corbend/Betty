@@ -24,6 +24,7 @@ public class MemoryObject<T> implements Iterator<T>{
     private String innerVal;
 
     private T object;
+
     public T getObject() {
         return object;
     }
@@ -46,10 +47,10 @@ public class MemoryObject<T> implements Iterator<T>{
 
     public MemoryObject(String value) {
 
-        T gObject = (T) JsonReader.jsonToJava(value);
-        log.log(Level.INFO, "GET OBJECT=", gObject.toString());
-        object = gObject;
-
+        if (value != null) {
+            T gObject = (T) JsonReader.jsonToJava(value);
+            object = gObject;
+        }
     }
 
     private String rawConvert(Object item) throws UnsupportedEncodingException {

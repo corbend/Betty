@@ -1,6 +1,7 @@
 package main.java.models.games;
 
 import main.java.models.bets.BetGroup;
+import main.java.models.sys.ScheduleParser;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -80,6 +81,10 @@ public class Game implements Serializable {
     }
 
     private boolean active;
+
+    @OneToMany(mappedBy="game")
+    private List<ScheduleParser> parsers;
+
 
     public Long getId() {
         return id;
@@ -179,5 +184,24 @@ public class Game implements Serializable {
     public void setGameEvents(List<GameEvent> lst) {
         gameEvents = lst;
     }
+
+    public List<ScheduleParser> getParsers() {
+        return parsers;
+    }
+
+    public void setParsers(List<ScheduleParser> parsers) {
+        this.parsers = parsers;
+    }
+
+    @Transient
+    public Boolean needToSchedule;
+    public Boolean getNeedToSchedule() {
+        return needToSchedule;
+    }
+
+    public void setNeedToSchedule(Boolean needToSchedule) {
+        this.needToSchedule = needToSchedule;
+    }
+
 
 }

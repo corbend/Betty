@@ -16,7 +16,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Startup
-@Singleton
+@Stateless
 public class ScoreParserStarter {
 
     private Logger log = Logger.getAnonymousLogger();
@@ -30,16 +30,15 @@ public class ScoreParserStarter {
     @EJB
     private GameManager gameManager;
 
-    @Inject
-    @ResultCheck
+    @Inject @ResultCheck
     private ParserFactory<ResultParser, ScheduleParser> scoreParserFactory;
 
-    @Schedule(minute="*/5")
+    @Schedule(second="*/20", minute="*", hour="*", persistent = false, timezone="Europe/Moscow")
     public void parseGameResults() {
         List<ScheduleParser> parsers = redisManager.getRange("Parsers", 0, 10);
         log.log(Level.INFO, "CHECK: prepare to parse result=>>parsers count=" + parsers.size());
 
-        for (ScheduleParser p: parsers) {
+        for (ScheduleParser p : parsers) {
 
             try {
                 executeResultParser(p);
@@ -50,7 +49,6 @@ public class ScoreParserStarter {
             }
         }
     }
-
 
     @Asynchronous
     public Future<List<GameEvent>> executeResultParser(ScheduleParser parser) throws InstantiationException, IllegalAccessException {

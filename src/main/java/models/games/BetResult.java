@@ -8,9 +8,10 @@ public class BetResult {
     private Integer value;
     private Boolean result;
 
-    public BetResult(String type, Integer value) {
+    public BetResult(String type, Integer value, Boolean result) {
         this.betType = type;
         this.value = value;
+        this.result = result;
     }
 
     public Boolean getResult() {

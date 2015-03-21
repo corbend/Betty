@@ -20,11 +20,10 @@ public abstract class ResultParser {
         this.persistenceParser = persistenceParser;
     }
 
-    public ResultParser() {
-        super();
-    }
 
-    public ResultParser(ScheduleParser parser) {};
+    public ResultParser(ScheduleParser parser) {this.persistenceParser = parser;}
+
+    public ResultParser() {}
 
     public List<GameEvent> parse(Game game) {
         return new ArrayList<>();

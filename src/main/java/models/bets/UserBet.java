@@ -17,7 +17,7 @@ import java.io.Serializable;
 public class UserBet extends UserTemporal implements Serializable {
 
     public static enum Status {
-        PENDING, ACTIVE, FREEZE, RESOLVED, CANCELLED
+        PENDING, ACTIVE, FREEZE, RESOLVED, CANCELLED, PRERESOLVE
     }
 
     @Id
@@ -44,10 +44,10 @@ public class UserBet extends UserTemporal implements Serializable {
     private Status status;
 
     private Boolean result;
+
     public Boolean getResult() {
         return result;
     }
-
     public void setResult(Boolean result) {
         this.result = result;
     }

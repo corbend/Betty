@@ -8,7 +8,8 @@ import java.util.List;
 @Table(name="accounts")
 @NamedQueries({
         @NamedQuery(name="FIND_ALL", query="SELECT a FROM Account a"),
-        @NamedQuery(name="Account.getService", query="SELECT a FROM Account a WHERE a.serviceType='service'")
+        @NamedQuery(name="Account.getService", query="SELECT a FROM Account a WHERE a.serviceType='service'"),
+        @NamedQuery(name="Account.getDefault", query="SELECT a FROM Account a WHERE a.user=:user LIMIT 1")
 })
 public class Account {
 

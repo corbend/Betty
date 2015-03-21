@@ -48,7 +48,7 @@ public class LiveScoreInParser extends EventParser {
     private List<WebElement> parseGameStat(String gameStatus, GameEvent gameEvent, WebElement root) {
 
         List<WebElement> teamInfoRows = new ArrayList<>();
-        if (gameStatus.equals("live") || gameStatus.equals("scheduled")) {
+        if (gameStatus.equals("live") || gameStatus.equals("scheduled") || gameStatus.equals("finished")) {
 
             teamInfoRows = root.findElements(By.className("stage-" + gameStatus));
             int c = 0;
@@ -164,10 +164,15 @@ public class LiveScoreInParser extends EventParser {
 
     }
 
-    private List<GameEvent> basketballParser(String gameName) {
+    private List<GameEvent> basketballParser(Game game) {
         //костыль (нужно понять почему не инжектится зависимость
+        boolean closeRedis = false;
 
-        redisManager = new RedisManager<>("localhost", 6379, "GameEvent");
+        if (redisManager == null) {
+            redisManager = new RedisManager<>("localhost", 6379, "GameEvent");
+            closeRedis = true;
+        }
+
         WebDriver driver = null;
 
         try {
@@ -194,40 +199,38 @@ public class LiveScoreInParser extends EventParser {
             List<WebElement> tableElements = rootTable.findElements(By.className("basketball"));
             List<GameEvent> shedules = new ArrayList<>();
 
-                for (WebElement elem : tableElements) {
+            for (WebElement elem : tableElements) {
 
-                    //parse header
-                    WebElement header = elem.findElement(By.className("head_ab"));
-                    String eventLocation = header.findElement(By.className("country_part")).getText();
-                    String eventName = header.findElement(By.className("tournament_part")).getText();
-                    GameEvent newGameEvent = new GameEvent();
-                    newGameEvent.setEventName(eventName);
-                    newGameEvent.setEventLocation(eventLocation);
-                    newGameEvent.setDateStart(parsedDate.toDate());
-                    newGameEvent.setDateEnd(parsedDate.toDate());
+                //parse header
+                WebElement header = elem.findElement(By.className("head_ab"));
+                String eventLocation = header.findElement(By.className("country_part")).getText();
+                String eventName = header.findElement(By.className("tournament_part")).getText();
+                GameEvent newGameEvent = new GameEvent();
+                newGameEvent.setEventName(eventName);
+                newGameEvent.setEventLocation(eventLocation);
+                newGameEvent.setDateStart(parsedDate.toDate());
+                newGameEvent.setDateEnd(parsedDate.toDate());
 
-                    //parse teams
-                    List<WebElement> teamInfoRows = parseGameStat("scheduled", newGameEvent, elem);
-                    List<WebElement> teamLiveInfoRows = parseGameStat("live", newGameEvent, elem);
-                    //пока существует только для тестирования
-                    List<WebElement> teamFinishedInfoRows = parseGameStat("finished", newGameEvent, elem);
-                    //TODO - parse scheduled
-                    if (teamInfoRows.size() > 0 || teamLiveInfoRows.size() > 0 || teamFinishedInfoRows.size() > 0) {
-                        shedules.add(newGameEvent);
-                    }
-
-                    log.log(Level.INFO, "SCHEDULED GAME EVENT PARSED->" +
-                                    newGameEvent.getEventName() + ", " +
-                                    newGameEvent.getEventLocation() + "," +
-                                    newGameEvent.getTeam1Name() + "," +
-                                    newGameEvent.getTeam2Name() + "."
-
-                    );
+                //parse teams
+                List<WebElement> teamInfoRows = parseGameStat("scheduled", newGameEvent, elem);
+                List<WebElement> teamLiveInfoRows = parseGameStat("live", newGameEvent, elem);
+                //пока существует только для тестирования
+                List<WebElement> teamFinishedInfoRows = parseGameStat("finished", newGameEvent, elem);
+                //TODO - parse scheduled
+                if (teamInfoRows.size() > 0 || teamLiveInfoRows.size() > 0 || teamFinishedInfoRows.size() > 0) {
+                    shedules.add(newGameEvent);
                 }
 
-            redisManager.addList("GameEvent", shedules);
+                log.log(Level.INFO, "SCHEDULED GAME EVENT PARSED->" +
+                                newGameEvent.getEventName() + ", " +
+                                newGameEvent.getEventLocation() + "," +
+                                newGameEvent.getTeam1Name() + "," +
+                                newGameEvent.getTeam2Name() + "."
 
-            log.log(Level.INFO, "Game Schedule ->" + gameName + "->PARSE=OK");
+                );
+            }
+
+            redisManager.addList("GameEvent", shedules);
 
             return shedules;
         } catch (MalformedURLException | NoSuchElementException e) {
@@ -237,17 +240,21 @@ public class LiveScoreInParser extends EventParser {
             if (driver != null) {
                 driver.quit();
             }
+
+            if (closeRedis) {
+                redisManager.close();
+            }
         }
 
     }
 
-    public List<GameEvent> parseFor(String gameName) {
-
+    public List<GameEvent> parseFor(Game game) {
+        String gameName = game.getName();
         url += gameName;
 
         switch (gameName) {
             case "basketball":
-                return basketballParser(gameName);
+                return basketballParser(game);
             default:
                 return new ArrayList<>();
         }
@@ -257,7 +264,7 @@ public class LiveScoreInParser extends EventParser {
     public List<GameEvent> parse(Game game, int forYear, int forMonth, int forDate) {
 
         parsedDate = new DateTime(forYear, forMonth, forDate, 0, 0, 0);
-        List<GameEvent> ls = parseFor(game.getName());
+        List<GameEvent> ls = parseFor(game);
         getPersistenceParser().setLastCompleteTime(DateTime.now());
         getPersistenceParser().setComplete(true);
 

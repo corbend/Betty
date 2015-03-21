@@ -26,26 +26,15 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-@MessageDriven(
-        mappedName="jms/javaee7/EventsActionQueue",
-        activationConfig =
-        {
-                @ActivationConfigProperty(propertyName = "destinationType",
-                        propertyValue = "javax.jms.Queue"),
-                @ActivationConfigProperty(propertyName = "destination",
-                        propertyValue = "EventsActionQueue")
-        }
-)
-public class GameEventResolver implements MessageListener {
+
+@Stateless
+public class GameEventResolver {
 /**
  * примитивный резолвер, который проверяет окончание игры и рассылает сообщения через JMS об окончании игры и результаты
  * 1) опрашиваем REDIS каждую минуту и берем список игр, запланированных на определенное время
  * 2)
  */
     private Logger log = Logger.getAnonymousLogger();
-
-    @EJB
-    private LiveBetsManager liveBetsManager;
 
     @EJB
     private GameSheduleManager gameEventManager;
@@ -58,9 +47,6 @@ public class GameEventResolver implements MessageListener {
 
     @Inject
     private RedisManager<GameEvent> gameEventPoolManager;
-
-    @Inject
-    private BetResolveProvider betResolveProvider;
 
     @Inject
     @JMSConnectionFactory("jms/javaee7/ConnectionFactory")
@@ -84,7 +70,7 @@ public class GameEventResolver implements MessageListener {
         }
     }
 
-    @Schedule(second="*/30")
+    @Schedule(second="*/30", hour="*", minute="*", timezone="Europe/Moscow")
     public void checkAllEndedEvents() throws JMSException {
 
         //проверяем завершенность всех матчей
@@ -93,88 +79,41 @@ public class GameEventResolver implements MessageListener {
 
         List<GameEvent> gameEvents = gameEventPoolManager.getRange("GameEvent", 0, -1);
 
-        if (gameEvents == null) {
-            log.log(Level.SEVERE, "Event Results not found!");
-            return;
-        } else {
+        if (gameEvents != null) {
             for (GameEvent event: gameEvents) {
-
+                log.log(Level.WARNING, "Event Check:" + event.getId());
                 GameEvent inMemoryGame = gameEventPoolManager.get(event.getId().toString());
                 //наличие по данному ключу данных, означает окончание игры
                 if (inMemoryGame == null) {
-                    log.log(Level.WARNING, "Event:" + event.toString() + "in progress.");
+                    log.log(Level.WARNING, "Event:" + event.toString() + "-> progress.");
                 } else {
                     ObjectMessage msg = context.createObjectMessage();
 
                     int score1 = inMemoryGame.getScores1().get(0);
                     int score2 = inMemoryGame.getScores2().get(0);
 
-                    msg.setObject(new GameEventMessage(event, score1, score2));
-                    log.log(Level.WARNING, "Event:" + event.toString() + "finished.");
+                    GameEvent clone = new GameEvent();
+
+                    clone.setId(event.getId());
+                    clone.setEventLocation(event.getEventLocation());
+                    clone.setEventName(event.getEventName());
+                    clone.setEventTime(event.getEventTime());
+                    clone.setDateStart(event.getDateStart());
+                    clone.setDateEnd(event.getDateEnd());
+                    clone.setTeam1Name(event.getTeam1Name());
+                    clone.setTeam2Name(event.getTeam2Name());
+
+                    GameEventMessage outm = new GameEventMessage(event, score1, score2);
+                    msg.setObject(outm);
+                    log.log(Level.WARNING, "Event:" + event.toString() + "-> finished.");
                     context.createProducer().send(eventsQueue, msg);
+
+                    //TODO - сделать удаление события после разрешения всех ставок из памяти
                 }
             }
         }
 
         //extractToPool();
-    }
-
-    private void setBetsToResolve(GameEvent gameEvent, GameEventMessage msg) {
-
-        List<LiveBet> liveBetsForEvent = liveBetsManager.getBetsForEvent(gameEvent);
-        List<UserBet> userBets = new ArrayList<>();
-        for (LiveBet liveBet: liveBetsForEvent) {
-            userBets.addAll(liveBet.getUserBets());
-
-            HashMap<BetResult, Boolean> scoreTable = new HashMap<>();
-            int handicap = msg.getScore1() - msg.getScore2();
-            int score1 = msg.getScore1();
-            int score2 = msg.getScore2();
-
-            //определяем исходы по базовым ставкам
-            if (score1 > score2) {
-                scoreTable.put(new BetResult(BetType.OW1.toString(), score1), true);
-                scoreTable.put(new BetResult(BetType.OW2.toString(), score2), false);
-                scoreTable.put(new BetResult(BetType.W1.toString(), score1), true);
-                scoreTable.put(new BetResult(BetType.W2.toString(), score2), false);
-                //распределяем форы
-                scoreTable.put(new BetResult(BetType.F1.toString(), handicap), true);
-                scoreTable.put(new BetResult(BetType.F2.toString(), handicap), false);
-                scoreTable.put(new BetResult(BetType.G1.toString(), handicap), true);
-                scoreTable.put(new BetResult(BetType.G2.toString(), handicap), false);
-            } else if (score1 < score2) {
-                scoreTable.put(new BetResult(BetType.OW1.toString(), score1), true);
-                scoreTable.put(new BetResult(BetType.OW2.toString(), score2), false);
-                scoreTable.put(new BetResult(BetType.W1.toString(), score1), true);
-                scoreTable.put(new BetResult(BetType.W2.toString(), score2), false);
-                //распределяем форы
-                scoreTable.put(new BetResult(BetType.F1.toString(), handicap), false);
-                scoreTable.put(new BetResult(BetType.F2.toString(), handicap), true);
-                scoreTable.put(new BetResult(BetType.G1.toString(), handicap), false);
-                scoreTable.put(new BetResult(BetType.G2.toString(), handicap), true);
-            } else {
-                scoreTable.put(new BetResult(BetType.D.toString(), 0), true);
-                scoreTable.put(new BetResult(BetType.W1W2.toString(), 0), true);
-            }
-
-            //определяем выигрыши по базовым ставкам
-            List<Integer> scores = new ArrayList<>();
-            scores.add(score1);
-            scores.add(score2);
-            betResolveProvider.resolveAll(userBets, gameEvent, scoreTable, scores);
-        }
-    }
-
-    @Override
-    public void onMessage(Message msg) {
-
-        ObjectMessage oMsg = (ObjectMessage) msg;
-        try {
-            GameEventMessage gMsg = (GameEventMessage) oMsg.getObject();
-            setBetsToResolve(gMsg.getEvent(), gMsg);
-        } catch (JMSException e) {
-            e.printStackTrace();
-        }
     }
 
 }

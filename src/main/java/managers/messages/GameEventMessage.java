@@ -6,6 +6,10 @@ import java.io.Serializable;
 
 public class GameEventMessage implements Serializable {
 
+    private GameEvent event;
+    private int score1;
+    private int score2;
+
     public GameEvent getEvent() {
         return event;
     }
@@ -30,13 +34,15 @@ public class GameEventMessage implements Serializable {
         this.score2 = score2;
     }
 
-    private GameEvent event;
-    private int score1;
-    private int score2;
-
     public GameEventMessage(GameEvent gameEvent, int score1, int score2) {
         this.event = gameEvent;
         this.score1 = score1;
         this.score2 = score2;
+    }
+
+    @Override
+    public String toString() {
+        GameEvent event = getEvent();
+        return event.getEventName() + "<" + event.getTeam1Name() + event.getTeam2Name() + ">=" + getScore1() + "," + getScore2();
     }
 }

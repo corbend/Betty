@@ -27,9 +27,6 @@ public abstract class EventParser {
 
     public EventParser() {}
 
-    public void init() {
-
-    }
 
     public List<GameEvent> parse(Game game, int forYear, int forMonth, int forDate) {return new ArrayList<>();}
 }

@@ -4,6 +4,7 @@ import main.java.billing.models.Account;
 import main.java.billing.models.Person;
 import main.java.billing.models.Transaction;
 import main.java.managers.messages.AccountMessage;
+import main.java.models.users.User;
 
 import javax.annotation.Resource;
 import javax.ejb.EJB;
@@ -61,6 +62,15 @@ public class AccountEJB {
         }
 
         return acc;
+    }
+
+    public Account getDefaultAccount(String username) {
+        try {
+            User user = em.createNamedQuery("User.getByLogin", User.class).setParameter("login", username).getSingleResult();
+            return em.createNamedQuery("Account.getDefault", Account.class).setParameter("user", user).getSingleResult();
+        } catch (NoResultException e) {
+            return null;
+        }
     }
 
     public void incrementBalance(Long accountId, Double amount) throws JMSException {

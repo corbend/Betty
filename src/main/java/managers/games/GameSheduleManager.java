@@ -48,8 +48,7 @@ public class GameSheduleManager {
     public List<GameEvent> getAllTodaySchedules() {
 
         return em.createNamedQuery("GameEvent.getForPreciseDate", GameEvent.class)
-                .setParameter("dateStart", new Date()).setParameter("dateEnd",
-                        DateTime.now().plusDays(1).withHourOfDay(0).toDate()).getResultList();
+                .setParameter("dateStart", new Date()).setParameter("dateEnd", new Date()).getResultList();
     }
 
     public void createTimer(Game game, Calendar cl) {
@@ -63,7 +62,7 @@ public class GameSheduleManager {
         TypedQuery<GameEvent> query = em.createNamedQuery("GameEvent.getForDate", GameEvent.class);
 
         query.setParameter("date", sheduleDate);
-        query.setParameter("gameId", game);
+        query.setParameter("game", game);
 
         gs = query.getResultList();
 

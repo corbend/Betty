@@ -2,10 +2,8 @@ package main.java.managers.grabbers.parsers;
 
 import main.java.managers.games.GameManager;
 import main.java.managers.games.GameSheduleManager;
-import main.java.managers.grabbers.ScheduleParserFactory;
 import main.java.managers.grabbers.parsers.interfaces.ParserFactory;
 import main.java.managers.grabbers.parsers.qualifiers.EventSchedule;
-import main.java.managers.grabbers.parsers.qualifiers.ResultCheck;
 import main.java.managers.loggers.ConcreteLogger;
 import main.java.managers.loggers.interfaces.SystemEventLogger;
 import main.java.managers.service.RedisManager;
@@ -20,12 +18,9 @@ import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 import javax.ejb.*;
 import javax.inject.Inject;
-import javax.interceptor.AroundInvoke;
 import javax.interceptor.Interceptors;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
-import javax.transaction.Transactional;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -64,11 +59,44 @@ public class ScheduleParserStarter {
     @EJB
     private GameSheduleManager gameEventManager;
 
+
+    private Boolean isNeedForNewSchedule(Game game, Date date) {
+
+        DateTime nowDate = new DateTime(date);
+        Boolean res = false;
+
+        DateTime checkDate = nowDate;
+        List<GameEvent> nextScheduleList = gameEventManager.getSavedShedulesForGame(game, checkDate.toDate());
+
+        if (nextScheduleList.size() == 0) {
+            game.setNeedToSchedule(true);
+            res = true;
+        } else {
+            log.log(Level.INFO, "Schedule is up to date.");
+        }
+
+        return res;
+    }
+
     private void initTodayEvents() {
         //инициализируем события на сегодня
         List<GameEvent> todayEvents = gameEventManager.getAllTodaySchedules();
+        List<GameEvent> serializableList = new ArrayList<>();
+        log.log(Level.INFO, "SET TODAY EVENT=" + todayEvents.size());
+        for (GameEvent clonable: todayEvents) {
+            GameEvent clone = new GameEvent();
+            clone.setId(clonable.getId());
+            clone.setEventLocation(clonable.getEventLocation());
+            clone.setEventName(clonable.getEventName());
+            clone.setEventTime(clonable.getEventTime());
+            clone.setDateStart(clonable.getDateStart());
+            clone.setDateEnd(clonable.getDateEnd());
+            clone.setTeam1Name(clonable.getTeam1Name());
+            clone.setTeam2Name(clonable.getTeam2Name());
+            serializableList.add(clone);
+        }
+        gameEventRedisManager.addList("GameEvent", serializableList);
 
-        gameEventRedisManager.addList("GameEvent", todayEvents);
     }
 
     @PostConstruct
@@ -83,19 +111,21 @@ public class ScheduleParserStarter {
         //добавляем список парсеров в редис
 
         for (ScheduleParser l: lst) {
-            detachedList.add(l.clone());
+            ScheduleParser clone = l.clone();
+            clone.setGame(null);
+            detachedList.add(clone);
         }
 
         redisManager.addList("Parsers", detachedList);
 
-        List<ScheduleParser> scheduleParsers = redisManager.getRange("Parsers", 0, -1);
-
         initTodayEvents();
 
-        for (ScheduleParser p: scheduleParsers) {
+        for (ScheduleParser p : lst) {
             log.log(Level.INFO, "Init Parser Schedule start ->name=" + p.getName());
             try {
-                executeParser(p, DateTime.now());
+                if (isNeedForNewSchedule(p.getGame(), DateTime.now().toDate())) {
+                    executeParser(p, DateTime.now());
+                }
             } catch (InstantiationException | IllegalAccessException e) {
                 e.printStackTrace();
             }
@@ -144,25 +174,30 @@ public class ScheduleParserStarter {
         }
         log.log(Level.INFO, "Schedule Prepare Next->");
         DateTime date = redisManager.popDate(REDIS_NEXT_SCHEDULE_DATE_KEY);
-        log.log(Level.INFO, "Schedule Prepare->Last Checked Time=" + date);
+
+        if (parsers.size() == 0) {
+            log.log(Level.SEVERE, "[ERROR] - NO PARSERS FOUND!");
+        }
+
         //FIXME - нужно передавать дату в функцию для того чтобы запросить расписание за конкретную дату
-        if (date == null) {
-            return;
-        } else {
-            for (ScheduleParser p : parsers) {
-                try {
-                    executeParser(p, date);
-                    log.log(Level.INFO, "PARSE: PARSE COMPLETE!" + date);
-                } catch (InstantiationException | IllegalAccessException e) {
-                    log.log(Level.INFO, "PARSE ERROR: PARSE INCOMPLETE!" + e.getMessage());
-                    e.printStackTrace();
-                    p.setComplete(false);
+        for (ScheduleParser p : parsers) {
+            ScheduleParser dbParser = em.find(ScheduleParser.class, p.getId());
+            try {
+                log.log(Level.INFO, "Schedule Prepare->Last Checked Time=" + date);
+                if (isNeedForNewSchedule(dbParser.getGame(), date.toDate())) {
+                    executeParser(dbParser, date);
                 }
+                log.log(Level.INFO, "PARSE: PARSE COMPLETE!" + date);
+            } catch (InstantiationException | IllegalAccessException e) {
+                log.log(Level.INFO, "PARSE ERROR: PARSE INCOMPLETE!" + e.getMessage());
+                e.printStackTrace();
+                p.setComplete(false);
             }
         }
+
     }
 
-    @Schedule(minute="*/2")
+    @Schedule(minute="*/2", hour="*", persistent=false)
     public void checkParserActiveState() {
 
         //live checking of working parsers
@@ -203,6 +238,7 @@ public class ScheduleParserStarter {
 
         log.log(Level.INFO, "LIST OF PREPARED SCHEDULE->" + ls.size() + ", date=" + date);
         for (GameEvent l: ls) {
+            l.setGame(parser.getGame());
             em.persist(l);
         }
         return new AsyncResult<>(ls);

@@ -54,6 +54,7 @@ public class AccountActionMDB implements MessageListener {
 
     @Override
     public void onMessage(Message msg) {
+        Long accountId;
 
         try {
 
@@ -71,18 +72,31 @@ public class AccountActionMDB implements MessageListener {
 
                 case "ACCOUNT_INC":
                     log.log(Level.INFO, "GET MESSAGE->" + inputMsg.getAction());
-                    Account destAccount = accountEJB.getAccount(inputMsg.getAccountId());
+                    accountId = inputMsg.getAccountId();
+                    Account destAccount;
+                    if (accountId == null) {
+                        destAccount = accountEJB.getDefaultAccount(inputMsg.getUsername());
+                    } else {
+                        destAccount = accountEJB.getAccount(inputMsg.getAccountId());
+                    }
+
                     transactionEJB.createChangeTransaction(null, destAccount, inputMsg.getAmount());
                     msg.acknowledge();
-                    returnWithStatus(inputMsg, "OK");
+                    //returnWithStatus(inputMsg, "OK");
                     break;
 
                 case "ACCOUNT_DEC":
                     log.log(Level.INFO, "GET MESSAGE->" + inputMsg.getAction());
-                    Account srcAccount = accountEJB.getAccount(inputMsg.getAccountId());
+                    accountId = inputMsg.getAccountId();
+                    Account srcAccount;
+                    if (accountId == null) {
+                        srcAccount = accountEJB.getDefaultAccount(inputMsg.getUsername());
+                    } else {
+                        srcAccount = accountEJB.getAccount(inputMsg.getAccountId());
+                    }
                     transactionEJB.createChangeTransaction(srcAccount, null, inputMsg.getAmount());
                     msg.acknowledge();
-                    returnWithStatus(inputMsg, "OK");
+                    //returnWithStatus(inputMsg, "OK");
                     break;
             }
 

@@ -1,5 +1,6 @@
 package main.java.models.sys;
 
+import main.java.models.games.Game;
 import org.joda.time.DateTime;
 
 import javax.persistence.*;
@@ -70,11 +71,12 @@ public class ScheduleParser implements Serializable {
 
     public ScheduleParser() {};
 
-    public ScheduleParser(Long id, String name, String url, Boolean status) {
+    public ScheduleParser(Long id, String name, String url, Boolean status, Game game) {
         this.id = id;
         this.name = name;
         this.url = url;
         this.status = status;
+        this.game = game;
     }
 
     @Override
@@ -84,7 +86,8 @@ public class ScheduleParser implements Serializable {
                 this.getId(),
                 this.getName(),
                 this.getUrl(),
-                this.getStatus()
+                this.getStatus(),
+                this.getGame()
         );
     }
 
@@ -95,6 +98,8 @@ public class ScheduleParser implements Serializable {
     private String url;
     private Boolean status = true;
 
+    @JoinColumn(name="game_id")
+    private Game game;
 
     public Proxy createProxy() {
         return new Proxy(this);
@@ -146,6 +151,14 @@ public class ScheduleParser implements Serializable {
     }
     public void setName(String name) {
         this.name = name;
+    }
+
+    public Game getGame() {
+        return game;
+    }
+
+    public void setGame(Game game) {
+        this.game = game;
     }
 
     @Override

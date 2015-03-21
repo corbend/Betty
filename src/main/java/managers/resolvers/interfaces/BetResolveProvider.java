@@ -11,6 +11,6 @@ public interface BetResolveProvider {
 
     public void resolveAll(List<UserBet> betList,
                            GameEvent gameEvent,
-                           HashMap<BetResult, Boolean> scoreTable,
+                           HashMap<String, BetResult> scoreTable,
                            List<Integer> scores);
 }

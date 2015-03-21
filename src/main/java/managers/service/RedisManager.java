@@ -42,15 +42,17 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
         String value = "";
 
         if (inCluster) {
-            value = cluster.get(namespace + key);
+            value = cluster.get(namespace + ":" + key);
         } else {
-            value = client.get(namespace + key);
+            value = client.get(namespace + ":" + key);
         }
-        return (T) (new MemoryObject((T) value).getObject());
+
+        T result = (T) new MemoryObject<>(value).getObject();
+        return result;
     }
 
     public void set(T value) {
-        MemoryObject obj = new MemoryObject(value);
+        MemoryObject obj = new MemoryObject<>(value);
         String setVal = obj.toString();
 
         if (inCluster) {
@@ -166,5 +168,13 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
         }
 
         return getRange(key, 0, -1);
+    }
+
+    public void close() {
+        if (inCluster) {
+            cluster.close();
+        } else {
+            client.close();
+        }
     }
 }

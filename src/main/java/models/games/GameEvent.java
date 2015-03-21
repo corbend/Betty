@@ -11,11 +11,11 @@ import java.util.List;
 @Table(name="game_events")
 @NamedQueries({
         @NamedQuery(name="GameEvent.getForDate",
-                query="SELECT a FROM GameEvent a WHERE a.dateStart = :date"),
+                query="SELECT a FROM GameEvent a WHERE a.dateStart = :date AND a.game=:game"),
         @NamedQuery(name="GameEvent.getForInterval",
                 query="SELECT a FROM GameEvent a WHERE a.dateStart BETWEEN :dateStart AND :dateEnd"),
         @NamedQuery(name="GameEvent.getForPreciseDate",
-                query="SELECT a FROM GameEvent a WHERE a.dateStart > :dateStart AND a.dateEnd < :dateEnd")
+                query="SELECT a FROM GameEvent a WHERE a.dateStart = :dateStart AND a.dateEnd = :dateEnd")
 })
 public class GameEvent implements Serializable {
 
@@ -30,9 +30,7 @@ public class GameEvent implements Serializable {
         this.id = id;
     }
 
-    public GameEvent() {
-
-    }
+    public GameEvent() {}
 
     public GameEvent(Long id, Game game, BetGroup betGroup, Date dateStart, Date dateEnd,
                      String eventName, String eventTime, String eventLocation, String team1Name, String team2Name) {
@@ -57,24 +55,23 @@ public class GameEvent implements Serializable {
 
     @JoinColumn(name="game_id")
     private Game game;
+
+    @OneToOne(mappedBy="gameEvent")
+    private BetGroup betGroup;
+
     public Game getGame() {
         return game;
     }
-
     public void setGame(Game v) {
         game = v;
     }
 
-    @OneToOne(mappedBy="gameEvent")
-    private BetGroup betGroup;
     public BetGroup getBetGroup() {
         return betGroup;
     }
-
     public void setBetGroup(BetGroup betGroup) {
         this.betGroup = betGroup;
     }
-
 
     @Temporal(value=TemporalType.DATE)
     private Date dateStart;
@@ -164,5 +161,10 @@ public class GameEvent implements Serializable {
     }
     public void setScores2(List<Integer> scores) {
         this.scores2 = scores;
+    }
+
+    @Override
+    public String toString() {
+        return this.getEventName() + "<->" + getEventLocation() + "<->" + getTeam1Name() + "<->" + getTeam2Name();
     }
 }

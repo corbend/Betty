@@ -13,6 +13,7 @@ import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
+import javax.ejb.Stateless;
 import javax.inject.Inject;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -23,6 +24,7 @@ import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+@Stateless
 public class LiveScoreInResultParser extends ResultParser {
 
     private String url = "http://www.livescore.in/ru/";
@@ -34,14 +36,10 @@ public class LiveScoreInResultParser extends ResultParser {
 
     private static String rootClass = "table-main";
 
-    public LiveScoreInResultParser(ScheduleParser parser) {
-
-        super(parser);
-        if (redisManager == null) {
-            redisManager = new RedisManager<>("127.0.0.1", 6379, "GameEvent");
-        }
-
+    public LiveScoreInResultParser() {
+        super();
     }
+    public LiveScoreInResultParser(ScheduleParser parser) { super(parser); }
 
     private GameEvent searchInStorage(List<GameEvent> activeGames,
                                             GameEvent checkGame) {
@@ -68,82 +66,96 @@ public class LiveScoreInResultParser extends ResultParser {
         return result;
     }
 
-    private List<WebElement> parseGameStat(String gameStatus, GameEvent gameEvent, WebElement root) {
+    private void parseGameStat(int commandLine, GameEvent gameEvent, WebElement root) {
 
-        List<WebElement> teamInfoRows = new ArrayList<>();
-        if (gameStatus.equals("finished")) {
+        log.log(Level.INFO, "FIND ENDED GAME=" + gameEvent.getEventName() + "," + gameEvent.getEventLocation());
+        String teamName = root.findElement(By.className("padl")).getText();
 
-            teamInfoRows = root.findElements(By.className("stage-" + gameStatus));
-            int c = 0;
+        if (commandLine == 0) {
+            WebElement timeCell = root.findElement(By.className("time"));
+            String eventTime = timeCell.getText();
+            String eventStatus = root.findElement(By.className("timer")).getText();
 
-            for (WebElement teamInfo: teamInfoRows) {
-                String teamName = teamInfo.findElement(By.className("padl")).getText();
+            gameEvent.setTeam1Name(teamName);
+            gameEvent.setEventTime(eventTime);
+            gameEvent.setStatus(eventStatus);
+            gameEvent.setDateStart(new Date());
+            gameEvent.setDateEnd(new Date());
 
-                if (c == 0) {
-                    String eventTime = teamInfo.findElement(By.className("time")).getText();
-                    String eventStatus = teamInfo.findElement(By.className("timer")).getText();
-
-                    gameEvent.setTeam1Name(teamName);
-                    gameEvent.setEventTime(eventTime);
-                    gameEvent.setStatus(eventStatus);
-                    gameEvent.setDateStart(new Date());
-                    gameEvent.setDateEnd(new Date());
-
-                    List<Integer> scores = new ArrayList<>();
-
-                    String scoreTotal = teamInfo.findElement(By.className("score-home")).getText();
-                    String score1 = teamInfo.findElement(By.className("cell_sd")).getText();
-                    String score2 = teamInfo.findElement(By.className("cell_se")).getText();
-                    String score3 = teamInfo.findElement(By.className("cell_sf")).getText();
-                    String score4 = teamInfo.findElement(By.className("cell_sg")).getText();
-                    String scoreOvertime = teamInfo.findElement(By.className("cell_sh")).getText();
-
-                    scores.add(Integer.parseInt(scoreTotal));
-                    scores.add(Integer.parseInt(score1));
-                    scores.add(Integer.parseInt(score2));
-                    scores.add(Integer.parseInt(score3));
-                    scores.add(Integer.parseInt(score4));
-                    scores.add(Integer.parseInt(scoreOvertime));
-                    gameEvent.setScores1(scores);
-
-                } else {
-
-                    String scoreTotal = teamInfo.findElement(By.className("score-away")).getText();
-                    String score1 = teamInfo.findElement(By.className("cell_ta")).getText();
-                    String score2 = teamInfo.findElement(By.className("cell_tb")).getText();
-                    String score3 = teamInfo.findElement(By.className("cell_tc")).getText();
-                    String score4 = teamInfo.findElement(By.className("cell_te")).getText();
-                    String scoreOvertime = teamInfo.findElement(By.className("cell_sh")).getText();
-
-                    List<Integer> scores = new ArrayList<>();
-
-                    scores.add(Integer.parseInt(scoreTotal));
-                    scores.add(Integer.parseInt(score1));
-                    scores.add(Integer.parseInt(score2));
-                    scores.add(Integer.parseInt(score3));
-                    scores.add(Integer.parseInt(score4));
-                    scores.add(Integer.parseInt(scoreOvertime));
-
-                    gameEvent.setScores2(scores);
-                    gameEvent.setTeam2Name(teamName);
-                }
-
-                c++;
+            log.log(Level.INFO, "TEAM 1=" + teamName + "," + eventTime);
+            //событие отменено
+            if (timeCell.getAttribute("class").contains("canceled")) {
+                return;
             }
+
+            List<String> rawScore = new ArrayList<>();
+            List<Integer> scores = new ArrayList<>();
+
+            rawScore.add(root.findElement(By.className("score-home")).getText());
+            rawScore.add(root.findElement(By.className("cell_sd")).getText());
+            rawScore.add(root.findElement(By.className("cell_se")).getText());
+            rawScore.add(root.findElement(By.className("cell_sf")).getText());
+            rawScore.add(root.findElement(By.className("cell_sg")).getText());
+            rawScore.add(root.findElement(By.className("cell_sh")).getText());
+
+            log.log(Level.INFO, "SCORE TEAM1 INFO=" + rawScore);
+
+            for (int i = 0; i < 6; i++) {
+                String score = rawScore.get(i);
+                try {
+                    scores.add(Integer.parseInt(score));
+                } catch (NumberFormatException e) {
+                    continue;
+                }
+            }
+
+            gameEvent.setScores1(scores);
+
+        } else {
+
+            log.log(Level.INFO, "TEAM 2=" + teamName);
+
+            List<String> rawScore = new ArrayList<>();
+            List<Integer> scores = new ArrayList<>();
+
+            rawScore.add(root.findElement(By.className("score-away")).getText());
+            rawScore.add(root.findElement(By.className("cell_ta")).getText());
+            rawScore.add(root.findElement(By.className("cell_tb")).getText());
+            rawScore.add(root.findElement(By.className("cell_tc")).getText());
+            rawScore.add(root.findElement(By.className("cell_te")).getText());
+            rawScore.add(root.findElement(By.className("cell_tf")).getText());
+
+            log.log(Level.INFO, "SCORE TEAM2 INFO=" + rawScore);
+
+            for (int i = 0; i < 6; i++) {
+                String score = rawScore.get(i);
+                try {
+                    scores.add(Integer.parseInt(score));
+                } catch (NumberFormatException e) {
+                    continue;
+                }
+            }
+
+            gameEvent.setScores2(scores);
+            gameEvent.setTeam2Name(teamName);
         }
 
-        return teamInfoRows;
     }
 
-    private List<GameEvent> basketballParser(String gameName) {
+    private List<GameEvent> basketballParser(Game game) {
         //костыль (нужно понять почему не инжектится зависимость
+        boolean closeRedis = false;
 
-        redisManager = new RedisManager<>("localhost", 6379, "GameEvent");
+        if (redisManager == null) {
+            redisManager = new RedisManager<>("localhost", 6379, "GameEvent");
+            closeRedis = true;
+        }
 
         List<GameEvent> activeGames = redisManager.getRange("GameEvent", 0, -1);
 
         WebDriver driver = null;
 
+        log.log(Level.INFO, "Check ended games=>" + activeGames.size());
         try {
             driver = new RemoteWebDriver(new URL("http://localhost:9515"), DesiredCapabilities.chrome());
             driver.get(url);
@@ -169,23 +181,31 @@ public class LiveScoreInResultParser extends ResultParser {
                 GameEvent newGameEvent = new GameEvent();
                 newGameEvent.setEventName(eventName);
                 newGameEvent.setEventLocation(eventLocation);
+                List<WebElement> subEventRows = elem.findElements(By.className("stage-" + "finished"));
+                int c = 1;
+                int commandLine = 0;
 
-                //parse teams
-                List<WebElement> teamInfoRows = parseGameStat("finished", newGameEvent, elem);
-
-                GameEvent inMemory = searchInStorage(activeGames, newGameEvent);
-                //если игра найдена в памяти, то сделаем слепок
-                if (inMemory == null) {
-                    log.log(Level.INFO, "SCORE RESULTS PARSED->GAME FULLY EXPIRED=" + newGameEvent);
-                    return shedules;
-                } else {
-                    redisManager.set(newGameEvent);
-                    if (teamInfoRows.size() > 0) {
-                        shedules.add(newGameEvent);
+                for (WebElement teamInfo: subEventRows) {
+                    //parse teams
+                    if (c % 2 == 0) {
+                        commandLine = 1;
+                    } else {
+                        commandLine = 0;
                     }
-                    log.log(Level.INFO, "SCORE RESULTS PARSED->GAME FINISHED=" + newGameEvent);
-                }
 
+                    parseGameStat(commandLine, newGameEvent, teamInfo);
+                    GameEvent inMemory = searchInStorage(activeGames, newGameEvent);
+                    //если игра найдена в памяти, то сделаем слепок
+
+                    if (inMemory != null) {
+                        newGameEvent.setId(inMemory.getId());
+                        redisManager.set(newGameEvent);
+                        shedules.add(newGameEvent);
+                        log.log(Level.INFO, "SCORE RESULTS PARSED->GAME FINISHED=" + inMemory.getId() + "," + newGameEvent);
+                    }
+
+                    c++;
+                }
             }
 
             return shedules;
@@ -196,26 +216,31 @@ public class LiveScoreInResultParser extends ResultParser {
             if (driver != null) {
                 driver.quit();
             }
+
+            if (closeRedis) {
+                redisManager.close();
+            }
         }
 
     }
 
-    public List<GameEvent> parseFor(String gameName) {
+    public List<GameEvent> parseFor(Game game) {
 
+        String gameName = game.getName();
         url += gameName;
 
         switch (gameName) {
             case "basketball":
-                return basketballParser(gameName);
+                return basketballParser(game);
             default:
                 return new ArrayList<>();
         }
 
     }
 
-    public List<GameEvent> parse(Game game, int forYear, int forMonth, int forDays) {
+    public List<GameEvent> parse(Game game) {
 
-        List<GameEvent> results = parseFor("basketball");
+        List<GameEvent> results = parseFor(game);
 
         return results;
     }
