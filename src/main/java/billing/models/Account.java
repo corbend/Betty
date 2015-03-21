@@ -9,7 +9,7 @@ import java.util.List;
 @NamedQueries({
         @NamedQuery(name="FIND_ALL", query="SELECT a FROM Account a"),
         @NamedQuery(name="Account.getService", query="SELECT a FROM Account a WHERE a.serviceType='service'"),
-        @NamedQuery(name="Account.getDefault", query="SELECT a FROM Account a WHERE a.user=:user LIMIT 1")
+        @NamedQuery(name="Account.getDefault", query="SELECT a FROM Account a WHERE a.person=:person")
 })
 public class Account {
 
@@ -17,39 +17,15 @@ public class Account {
     @GeneratedValue
     private Long id;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     @Column(name="service_type")
     private String serviceType;
-    public String getServiceType() {
-        return serviceType;
-    }
-
-    public void setServiceType(String serviceType) {
-        this.serviceType = serviceType;
-    }
 
     @OneToOne(mappedBy="account", cascade = CascadeType.PERSIST)
     //TODO - добавить при следующей миграции базы
-    @JoinColumn(name="person_id")
     private Person person;
 
     @Column(name="amount")
     private Double totalAmount = 0.0;
-
-    public Date getCreatedDate() {
-        return createdDate;
-    }
-
-    public void setCreatedDate(Date createdDate) {
-        this.createdDate = createdDate;
-    }
 
     @Column(name="created_date")
     @Temporal(TemporalType.DATE)
@@ -62,6 +38,27 @@ public class Account {
     @OneToMany(mappedBy="srcAccount", cascade = CascadeType.PERSIST)
     @JoinColumn(name="src_account_id")
     private List<Transaction> outTransactions;
+
+    public Long getId() {
+        return id;
+    }
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getServiceType() {
+        return serviceType;
+    }
+    public void setServiceType(String serviceType) {
+        this.serviceType = serviceType;
+    }
+
+    public Date getCreatedDate() {
+        return createdDate;
+    }
+    public void setCreatedDate(Date createdDate) {
+        this.createdDate = createdDate;
+    }
 
     public List<Transaction> getOutTransactions() {
         return outTransactions;

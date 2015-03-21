@@ -36,6 +36,7 @@ public class AccountEJB {
     @JMSConnectionFactory("jms/javaee7/ConnectionFactory")
     @JMSSessionMode(JMSContext.CLIENT_ACKNOWLEDGE)
     private JMSContext context;
+
     @Resource(lookup = "jms/javaee7/AccountActionQueue")
     private Queue accountQueue;
 
@@ -64,10 +65,16 @@ public class AccountEJB {
         return acc;
     }
 
+    public Person getPersonByUser(User user) {
+        return em.createNamedQuery("Person.findByExternalId", Person.class)
+                .setParameter("externalId", user.getLogin()).getSingleResult();
+    }
+
     public Account getDefaultAccount(String username) {
         try {
-            User user = em.createNamedQuery("User.getByLogin", User.class).setParameter("login", username).getSingleResult();
-            return em.createNamedQuery("Account.getDefault", Account.class).setParameter("user", user).getSingleResult();
+            User user = em.createNamedQuery("User.findByLogin", User.class).setParameter("login", username).getSingleResult();
+            Person person = getPersonByUser(user);
+            return person.getAccount();
         } catch (NoResultException e) {
             return null;
         }
@@ -89,7 +96,6 @@ public class AccountEJB {
         accMsg.setAccountId(accountId);
         msg.setObject(accMsg);
 
-
         log.log(Level.INFO, "SEND MESSAGE->" + accMsg.getAction());
         JMSConsumer consumer = context.createConsumer(accountQueue);
 
@@ -100,9 +106,23 @@ public class AccountEJB {
             AccountMessage inAccMsg = (AccountMessage) inMsg.getObject();
             if (inAccMsg.getAction().equals("ACCOUNT_INC") && inAccMsg.getStatus().equals("OK")) {
                 inMsg.acknowledge();
+                log.log(Level.INFO, "GET ACK MESSAGE->" + inAccMsg.getAction());
+                em.persist(acc);
                 return;
             }
         }
+    }
+
+    //используем дефолтный аккаунт
+    public void incrementBalance(String username, Double amount) throws JMSException {
+        Account defAccount = getDefaultAccount(username);
+        incrementBalance(defAccount.getId(), amount);
+    }
+
+    //используем дефолтный аккаунт
+    public void decrementBalance(String username, Double amount) throws JMSException, NotEnoughFundsException {
+        Account defAccount = getDefaultAccount(username);
+        decrementBalance(defAccount.getId(), amount);
     }
 
     public void decrementBalance(Long accountId, Double amount) throws NotEnoughFundsException, JMSException {

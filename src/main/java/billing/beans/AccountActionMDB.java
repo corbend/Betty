@@ -82,7 +82,7 @@ public class AccountActionMDB implements MessageListener {
 
                     transactionEJB.createChangeTransaction(null, destAccount, inputMsg.getAmount());
                     msg.acknowledge();
-                    //returnWithStatus(inputMsg, "OK");
+                    returnWithStatus(inputMsg, "OK");
                     break;
 
                 case "ACCOUNT_DEC":
@@ -96,7 +96,7 @@ public class AccountActionMDB implements MessageListener {
                     }
                     transactionEJB.createChangeTransaction(srcAccount, null, inputMsg.getAmount());
                     msg.acknowledge();
-                    //returnWithStatus(inputMsg, "OK");
+                    returnWithStatus(inputMsg, "OK");
                     break;
             }
 

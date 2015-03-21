@@ -86,5 +86,7 @@ public class UserBet extends UserTemporal implements Serializable {
         this.userName = user_name;
     }
 
-
+    public String getRawUserName() {
+        return userName;
+    }
 }

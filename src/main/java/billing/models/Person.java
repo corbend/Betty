@@ -1,10 +1,14 @@
 package main.java.billing.models;
 
+import javax.inject.Named;
 import javax.persistence.*;
 import java.util.Date;
 
 @Entity
 @Table(name="persons")
+@NamedQueries({
+        @NamedQuery(name="Person.findByExternalId", query="SELECT p FROM Person p WHERE p.externalId=:externalId")
+})
 public class Person {
 
     @Id
@@ -21,14 +25,6 @@ public class Person {
 
     @JoinColumn(name="account_id")
     private Account account;
-    public Account getAccountId() {
-        return account;
-    }
-
-    public void setAccountId(Account account) {
-        this.account = account;
-    }
-
 
     @Temporal(value=TemporalType.DATE)
     private Date birthdate;
@@ -126,6 +122,14 @@ public class Person {
 
     public void setBirthdate(Date value) {
         birthdate = value;
+    }
+
+    public Account getAccount() {
+        return account;
+    }
+
+    public void setAccount(Account account) {
+        this.account = account;
     }
 
 }
