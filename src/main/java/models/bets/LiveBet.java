@@ -37,11 +37,11 @@ public class LiveBet {
         this.funds = funds;
     }
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name="game_event_id")
     private GameEvent gameEvent;
 
-    @OneToMany(mappedBy = "liveBet")
+    @OneToMany(mappedBy = "liveBet", fetch = FetchType.EAGER)
     private List<UserBet> userBets;
 
     public Long getId() {

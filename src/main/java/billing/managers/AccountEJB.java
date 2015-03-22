@@ -25,7 +25,18 @@ import java.util.logging.Logger;
 //@Local(AccountLocal.class)
 public class AccountEJB {
 
-    public class NotEnoughFundsException extends Exception {}
+    public class NotEnoughFundsException extends Exception {
+
+        private Long accountId;
+
+        public NotEnoughFundsException() {};
+        public NotEnoughFundsException(Long accountId) {this.accountId = accountId;}
+
+        @Override
+        public String getMessage() {
+            return "Not enough funds in account=" + accountId;
+        }
+    }
     public class ServiceAccountNotFound extends Exception {}
 
     private static Logger log = Logger.getLogger(AccountEJB.class.getName());
@@ -89,28 +100,31 @@ public class AccountEJB {
 
         acc.setTotalAmount(newAmount);
 
-        ObjectMessage msg = context.createObjectMessage();
-        AccountMessage accMsg = new AccountMessage();
-        accMsg.setAction("ACCOUNT_INC");
-        accMsg.setAmount(amount);
-        accMsg.setAccountId(accountId);
-        msg.setObject(accMsg);
+        em.persist(acc);
 
-        log.log(Level.INFO, "SEND MESSAGE->" + accMsg.getAction());
-        JMSConsumer consumer = context.createConsumer(accountQueue);
+//        ObjectMessage msg = context.createObjectMessage();
+//        AccountMessage accMsg = new AccountMessage();
+//        accMsg.setAction("ACCOUNT_INC");
+//        accMsg.setAmount(amount);
+//        accMsg.setAccountId(accountId);
 
-        context.createProducer().setDeliveryMode(DeliveryMode.PERSISTENT).send(accountQueue, msg);
-
-        while (true) {
-            ObjectMessage inMsg = (ObjectMessage) consumer.receive();
-            AccountMessage inAccMsg = (AccountMessage) inMsg.getObject();
-            if (inAccMsg.getAction().equals("ACCOUNT_INC") && inAccMsg.getStatus().equals("OK")) {
-                inMsg.acknowledge();
-                log.log(Level.INFO, "GET ACK MESSAGE->" + inAccMsg.getAction());
-                em.persist(acc);
-                return;
-            }
-        }
+//        msg.setObject(accMsg);
+//
+//        log.log(Level.INFO, "SEND MESSAGE->" + accMsg.getAction());
+//        JMSConsumer consumer = context.createConsumer(accountQueue);
+//
+//        context.createProducer().send(accountQueue, msg);
+//
+//        while (true) {
+//            ObjectMessage inMsg = (ObjectMessage) consumer.receive();
+//            AccountMessage inAccMsg = (AccountMessage) inMsg.getObject();
+//            if (inAccMsg.getAction().equals("ACCOUNT_INC") && inAccMsg.getStatus().equals("OK")) {
+//                inMsg.acknowledge();
+//                log.log(Level.INFO, "GET ACK MESSAGE->" + inAccMsg.getAction());
+//                em.persist(acc);
+//                return;
+//            }
+//        }
     }
 
     //используем дефолтный аккаунт
@@ -130,36 +144,38 @@ public class AccountEJB {
         Account acc = em.find(Account.class, accountId);
 
         Double oldAmount = acc.getTotalAmount();
-
         Double newAmount = oldAmount - amount;
 
         if (newAmount < 0) {
-            throw new NotEnoughFundsException();
+            throw new NotEnoughFundsException(accountId);
         }
 
         acc.setTotalAmount(newAmount);
 
-        ObjectMessage msg = context.createObjectMessage();
-        AccountMessage accMsg = new AccountMessage();
-        accMsg.setAction("ACCOUNT_DEC");
-        accMsg.setAmount(amount);
-        accMsg.setAccountId(accountId);
-        msg.setObject(accMsg);
+        em.persist(acc);
 
-        log.log(Level.INFO, "SEND MESSAGE->" + accMsg.getAction());
-        JMSConsumer consumer = context.createConsumer(accountQueue);
-
-        context.createProducer().send(accountQueue, msg);
-
-        while (true) {
-
-            ObjectMessage inMsg = (ObjectMessage) consumer.receive();
-            AccountMessage inAccMsg = (AccountMessage) inMsg.getObject();
-            if (inAccMsg.getAction().equals("ACCOUNT_DEC") && inAccMsg.getStatus().equals("OK")) {
-                inMsg.acknowledge();
-                return;
-            }
-        }
+//        ObjectMessage msg = context.createObjectMessage();
+//        AccountMessage accMsg = new AccountMessage();
+//
+//        accMsg.setAction("ACCOUNT_DEC");
+//        accMsg.setAmount(amount);
+//        accMsg.setAccountId(accountId);
+//        msg.setObject(accMsg);
+//
+//        log.log(Level.INFO, "SEND MESSAGE->" + accMsg.getAction());
+//        JMSConsumer consumer = context.createConsumer(accountQueue);
+//
+//        context.createProducer().send(accountQueue, msg);
+//
+//        while (true) {
+//
+//            ObjectMessage inMsg = (ObjectMessage) consumer.receive();
+//            AccountMessage inAccMsg = (AccountMessage) inMsg.getObject();
+//            if (inAccMsg.getAction().equals("ACCOUNT_DEC") && inAccMsg.getStatus().equals("OK")) {
+//                inMsg.acknowledge();
+//                return;
+//            }
+//        }
     }
 
     public void createAccount(Person p) {

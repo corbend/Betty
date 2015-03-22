@@ -1,5 +1,6 @@
 package main.java.managers.resolvers.beans;
 
+import main.java.managers.bets.BetManager;
 import main.java.managers.bets.LiveBetsManager;
 import main.java.managers.messages.GameEventMessage;
 import main.java.managers.resolvers.interfaces.BetResolveProvider;
@@ -17,6 +18,8 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageListener;
 import javax.jms.ObjectMessage;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +38,12 @@ import java.util.logging.Logger;
 )
 public class ResolverMDB implements MessageListener {
 
+    @PersistenceContext
+    private EntityManager em;
+
+    @EJB
+    private BetManager betManager;
+
     @EJB
     private LiveBetsManager liveBetsManager;
 
@@ -48,12 +57,16 @@ public class ResolverMDB implements MessageListener {
         List<LiveBet> liveBetsForEvent = liveBetsManager.getBetsForEvent(gameEvent);
         List<UserBet> userBets = new ArrayList<>();
 
-        log.log(Level.INFO, "Proccess live bets resolving=>" + liveBetsForEvent.size() + ", msg=" + msg.toString());
+        log.log(Level.INFO, "Proccess live bets resolving=>" + liveBetsForEvent.size() +
+                ", event=" + "(" + gameEvent.getId() + ")" + msg.getEvent() +
+                ", msg=" + msg.toString());
 
         for (LiveBet liveBet: liveBetsForEvent) {
 
-            userBets.addAll(liveBet.getUserBets());
-            log.log(Level.INFO, "Proccess user bets resolving=>" + userBets.size());
+            userBets.addAll(betManager.getUserBetsByLiveBet(liveBet));
+            log.log(Level.INFO, "Proccess user bets resolving=>"
+                    + ", event=" + "(" + gameEvent.getId() + ")"
+                    + ", size=" + userBets.size());
 
             HashMap<String, BetResult> scoreTable = new HashMap<>();
             int handicap = msg.getScore1() - msg.getScore2();
@@ -74,10 +87,10 @@ public class ResolverMDB implements MessageListener {
                 scoreTable.put(BetType.G2.toString(), new BetResult(BetType.G2.toString(), handicap, false));
             } else if (score1 < score2) {
                 log.log(Level.INFO, "Game Result=>team2 win, " + score1 + "," + score2);
-                scoreTable.put(BetType.OW1.toString(), new BetResult(BetType.OW1.toString(), score1, true));
-                scoreTable.put(BetType.OW2.toString(), new BetResult(BetType.OW2.toString(), score2, false));
-                scoreTable.put(BetType.W1.toString(), new BetResult(BetType.W1.toString(), score1, true));
-                scoreTable.put(BetType.W2.toString(), new BetResult(BetType.W2.toString(), score2, false));
+                scoreTable.put(BetType.OW1.toString(), new BetResult(BetType.OW1.toString(), score1, false));
+                scoreTable.put(BetType.OW2.toString(), new BetResult(BetType.OW2.toString(), score2, true));
+                scoreTable.put(BetType.W1.toString(), new BetResult(BetType.W1.toString(), score1, false));
+                scoreTable.put(BetType.W2.toString(), new BetResult(BetType.W2.toString(), score2, true));
                 //распределяем форы
                 scoreTable.put(BetType.F1.toString(), new BetResult(BetType.F1.toString(), handicap, false));
                 scoreTable.put(BetType.F2.toString(), new BetResult(BetType.F2.toString(), handicap, true));

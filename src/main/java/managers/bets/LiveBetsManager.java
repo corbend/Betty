@@ -17,8 +17,9 @@ public class LiveBetsManager {
 
     public List<LiveBet> getBetsForEvent(GameEvent gameEvent) {
 
+        GameEvent updatedGameEvent = em.find(GameEvent.class, gameEvent.getId());
         return em.createNamedQuery("LiveBet.findBetsForEvent", LiveBet.class)
-                .setParameter("gameEvent", gameEvent).getResultList();
+                .setParameter("gameEvent", updatedGameEvent).getResultList();
     }
 
     public LiveBet get(Long id) {

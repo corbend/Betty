@@ -12,6 +12,8 @@ import javax.ejb.MessageDriven;
 import javax.ejb.MessageDrivenContext;
 import javax.inject.Inject;
 import javax.jms.*;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.security.auth.login.AccountLockedException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,6 +34,10 @@ public class AccountActionMDB implements MessageListener {
     private JMSContext context;
     @Resource(lookup = "jms/javaee7/AccountActionQueue")
     private Queue accountQueue;
+    @Resource(lookup = "jms/javaee7/BetActionQueue")
+    private Queue betQueue;
+
+    @Resource private MessageDrivenContext mcontext;
 
     private static Logger log = Logger.getLogger(AccountActionMDB.class.getName());
 
@@ -52,6 +58,18 @@ public class AccountActionMDB implements MessageListener {
         context.createProducer().send(accountQueue, outMsg);
     }
 
+    private void returnWithString(AccountMessage inputMsg) throws JMSException {
+
+        String receiverName = inputMsg.getReceiverJNDI();
+
+        //Destination receiver = (Destination) mcontext.lookup(receiverName);
+
+        log.log(Level.INFO, "SEND TO JMS TO RESOLVE QUEUE");
+        TextMessage tx = context.createTextMessage(inputMsg.getOutputMessage());
+        context.createProducer().send(betQueue, tx);
+
+    }
+
     @Override
     public void onMessage(Message msg) {
         Long accountId;
@@ -63,6 +81,7 @@ public class AccountActionMDB implements MessageListener {
             String msgAction = inputMsg.getAction();
 
             switch(msgAction) {
+
                 case "CREATE_DEFAULT":
                     String userEntityId = inputMsg.getEntityId();
                     accountEJB.createDefaultAccount(userEntityId);
@@ -71,6 +90,7 @@ public class AccountActionMDB implements MessageListener {
                     break;
 
                 case "ACCOUNT_INC":
+
                     log.log(Level.INFO, "GET MESSAGE->" + inputMsg.getAction());
                     accountId = inputMsg.getAccountId();
                     Account destAccount;
@@ -80,9 +100,15 @@ public class AccountActionMDB implements MessageListener {
                         destAccount = accountEJB.getAccount(inputMsg.getAccountId());
                     }
 
-                    transactionEJB.createChangeTransaction(null, destAccount, inputMsg.getAmount());
+                    transactionEJB.createChangeTransaction(null, destAccount, inputMsg.getAmount(), inputMsg.getOutputMessage());
                     msg.acknowledge();
-                    returnWithStatus(inputMsg, "OK");
+                    accountEJB.incrementBalance(inputMsg.getUsername(), inputMsg.getAmount());
+                    try {
+                        returnWithString(inputMsg);
+                    } catch (JMSException e) {
+                        log.log(Level.SEVERE, e.getMessage() + "\r\n" + e.getStackTrace());
+                    }
+
                     break;
 
                 case "ACCOUNT_DEC":
@@ -94,9 +120,15 @@ public class AccountActionMDB implements MessageListener {
                     } else {
                         srcAccount = accountEJB.getAccount(inputMsg.getAccountId());
                     }
-                    transactionEJB.createChangeTransaction(srcAccount, null, inputMsg.getAmount());
+                    transactionEJB.createChangeTransaction(srcAccount, null, inputMsg.getAmount(), inputMsg.getOutputMessage());
                     msg.acknowledge();
-                    returnWithStatus(inputMsg, "OK");
+                    try {
+                        accountEJB.decrementBalance(inputMsg.getUsername(), inputMsg.getAmount());
+                        returnWithString(inputMsg);
+                    } catch (AccountEJB.NotEnoughFundsException e) {
+                        log.log(Level.SEVERE, e.getMessage() + "\r\n" + e.getStackTrace().toString());
+                    }
+
                     break;
             }
 

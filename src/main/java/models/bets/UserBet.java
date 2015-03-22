@@ -12,7 +12,8 @@ import java.io.Serializable;
 @NamedQueries({
     //@NamedQuery(name="GET_AMOUNT_SUM", query="SELECT COUNT(b.amount) FROM UserBet b WHERE b.status=b.Status.ACTIVE")
         //TODO - оставить только активные ставки
-    @NamedQuery(name="UserBet.getActiveByUser", query="SELECT b FROM UserBet b")
+    @NamedQuery(name="UserBet.getActiveByUser", query="SELECT b FROM UserBet b"),
+        @NamedQuery(name="UserBet.getByLiveBet", query="SELECT b FROM UserBet b WHERE b.liveBet=:liveBet")
 })
 public class UserBet extends UserTemporal implements Serializable {
 
@@ -23,12 +24,10 @@ public class UserBet extends UserTemporal implements Serializable {
     @Id
     @GeneratedValue
     private Long id;
-
     @Override
     public Long getId() {
         return id;
     }
-
     @Override
     public void setId(Long id) {
         this.id = id;
@@ -40,10 +39,10 @@ public class UserBet extends UserTemporal implements Serializable {
 
     @Column(name="ammount")
     private Double amount;
-
     private Status status;
-
     private Boolean result;
+
+    private Double coefficient;
 
     public Boolean getResult() {
         return result;
@@ -85,8 +84,16 @@ public class UserBet extends UserTemporal implements Serializable {
     public void setUserName(String user_name) {
         this.userName = user_name;
     }
-
     public String getRawUserName() {
         return userName;
     }
+
+    public Double getCoefficient() {
+        return coefficient;
+    }
+
+    public void setCoefficient(Double coefficient) {
+        this.coefficient = coefficient;
+    }
+
 }

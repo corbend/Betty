@@ -43,16 +43,19 @@ public class TransactionEJB {
         }
     }
 
-    public boolean createChangeTransaction(Account src, Account dest, Double amount) throws AccountLockedException {
+    public boolean createChangeTransaction(Account src, Account dest, Double amount, String text) throws AccountLockedException {
 
         Transaction transaction = new Transaction();
         transaction.setAmount(amount);
+        transaction.setTargetText(text);
 
         if (src != null) {
+            transaction.setDestAccount(dest);
             manageOutputTransaction(src, transaction);
         }
 
         if (dest != null) {
+            transaction.setSrcAccount(src);
             manageInputTransaction(dest, transaction);
         }
 
@@ -62,7 +65,7 @@ public class TransactionEJB {
     public boolean transferToService(Account src, Double amount) throws AccountEJB.ServiceAccountNotFound, AccountLockedException {
         //передача на сервисный аккаунт
         Account serviceAccount = accountEJB.getServiceAccount();
-        createChangeTransaction(src, serviceAccount, amount);
+        createChangeTransaction(src, serviceAccount, amount, "");
 
         return true;
     }

@@ -210,7 +210,7 @@ public class LiveScoreInResultParser extends ResultParser {
 
             return shedules;
 
-        } catch (MalformedURLException | NoSuchElementException e) {
+        } catch (MalformedURLException | NoSuchElementException | org.openqa.selenium.TimeoutException e) {
             return new ArrayList<>();
         } finally {
             if (driver != null) {

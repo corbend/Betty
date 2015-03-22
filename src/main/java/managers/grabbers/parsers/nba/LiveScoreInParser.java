@@ -45,31 +45,20 @@ public class LiveScoreInParser extends EventParser {
         super(parser);
     }
 
-    private List<WebElement> parseGameStat(String gameStatus, GameEvent gameEvent, WebElement root) {
+    private void parseGameStat(int commandCount, GameEvent gameEvent, WebElement root) {
 
-        List<WebElement> teamInfoRows = new ArrayList<>();
-        if (gameStatus.equals("live") || gameStatus.equals("scheduled") || gameStatus.equals("finished")) {
+        String teamName = root.findElement(By.className("padl")).getText();
 
-            teamInfoRows = root.findElements(By.className("stage-" + gameStatus));
-            int c = 0;
-
-            for (WebElement teamInfo: teamInfoRows) {
-                String teamName = teamInfo.findElement(By.className("padl")).getText();
-                if (c == 0) {
-                    String eventTime = teamInfo.findElement(By.className("time")).getText();
-                    String eventStatus = teamInfo.findElement(By.className("timer")).getText();
-                    gameEvent.setTeam1Name(teamName);
-                    gameEvent.setEventTime(eventTime);
-                    gameEvent.setStatus(eventStatus);
-                } else {
-                    gameEvent.setTeam2Name(teamName);
-                }
-
-                c++;
-            }
+        if (commandCount == 0) {
+            String eventTime = root.findElement(By.className("time")).getText();
+            String eventStatus = root.findElement(By.className("timer")).getText();
+            gameEvent.setTeam1Name(teamName);
+            gameEvent.setEventTime(eventTime);
+            gameEvent.setStatus(eventStatus);
+        } else {
+            gameEvent.setTeam2Name(teamName);
         }
 
-        return teamInfoRows;
     }
 
     private void clickAndParseDateMenu(WebDriver driver) {
@@ -205,35 +194,49 @@ public class LiveScoreInParser extends EventParser {
                 WebElement header = elem.findElement(By.className("head_ab"));
                 String eventLocation = header.findElement(By.className("country_part")).getText();
                 String eventName = header.findElement(By.className("tournament_part")).getText();
-                GameEvent newGameEvent = new GameEvent();
-                newGameEvent.setEventName(eventName);
-                newGameEvent.setEventLocation(eventLocation);
-                newGameEvent.setDateStart(parsedDate.toDate());
-                newGameEvent.setDateEnd(parsedDate.toDate());
 
                 //parse teams
-                List<WebElement> teamInfoRows = parseGameStat("scheduled", newGameEvent, elem);
-                List<WebElement> teamLiveInfoRows = parseGameStat("live", newGameEvent, elem);
-                //пока существует только для тестирования
-                List<WebElement> teamFinishedInfoRows = parseGameStat("finished", newGameEvent, elem);
-                //TODO - parse scheduled
-                if (teamInfoRows.size() > 0 || teamLiveInfoRows.size() > 0 || teamFinishedInfoRows.size() > 0) {
+                List<WebElement> scheduledRows = elem.findElements(By.className("stage-scheduled"));
+                List<WebElement> liveRows = elem.findElements(By.className("stage-live"));
+                List<WebElement> finishedRows = elem.findElements(By.className("stage-finished"));
+                List<WebElement> lst = new ArrayList<>();
+
+                lst.addAll(scheduledRows);
+                lst.addAll(liveRows);
+                lst.addAll(finishedRows);
+
+                int counter = 1;
+                int commandCount = 0;
+                GameEvent newGameEvent = new GameEvent();
+
+                for (WebElement row: lst) {
+
+                    if (counter % 2 == 0) {
+                        commandCount = 1;
+                    } else {
+                        newGameEvent = new GameEvent();
+                        commandCount = 0;
+                    }
+
+                    newGameEvent.setEventName(eventName);
+                    newGameEvent.setEventLocation(eventLocation);
+                    newGameEvent.setDateStart(parsedDate.toDate());
+                    newGameEvent.setDateEnd(parsedDate.toDate());
+
+                    parseGameStat(commandCount, newGameEvent, row);
                     shedules.add(newGameEvent);
+
+                    counter++;
+                    log.log(Level.INFO, "GAME EVENT PARSED=" + newGameEvent.toString());
                 }
+                //TODO - parse scheduled
 
-                log.log(Level.INFO, "SCHEDULED GAME EVENT PARSED->" +
-                                newGameEvent.getEventName() + ", " +
-                                newGameEvent.getEventLocation() + "," +
-                                newGameEvent.getTeam1Name() + "," +
-                                newGameEvent.getTeam2Name() + "."
-
-                );
             }
 
             redisManager.addList("GameEvent", shedules);
 
             return shedules;
-        } catch (MalformedURLException | NoSuchElementException e) {
+        } catch (MalformedURLException | NoSuchElementException | org.openqa.selenium.TimeoutException e) {
             log.log(Level.SEVERE, e.getStackTrace().toString());
             return new ArrayList<>();
         } finally {

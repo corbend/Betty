@@ -83,6 +83,7 @@ public class ScheduleParserStarter {
         List<GameEvent> todayEvents = gameEventManager.getAllTodaySchedules();
         List<GameEvent> serializableList = new ArrayList<>();
         log.log(Level.INFO, "SET TODAY EVENT=" + todayEvents.size());
+
         for (GameEvent clonable: todayEvents) {
             GameEvent clone = new GameEvent();
             clone.setId(clonable.getId());
@@ -95,6 +96,7 @@ public class ScheduleParserStarter {
             clone.setTeam2Name(clonable.getTeam2Name());
             serializableList.add(clone);
         }
+
         gameEventRedisManager.addList("GameEvent", serializableList);
 
     }
@@ -240,6 +242,12 @@ public class ScheduleParserStarter {
         for (GameEvent l: ls) {
             l.setGame(parser.getGame());
             em.persist(l);
+        }
+        //если запрашивается данные по расписанию за текущую дату, то нужно инициировать записи в Redis
+        //для возможности обработки ставок
+        if (DateTime.now().withHourOfDay(0).withMinuteOfHour(0).withSecondOfMinute(0).withMillis(0) ==
+                date.withHourOfDay(0).withMinuteOfHour(0).withSecondOfMinute(0).withMillis(0)) {
+            initTodayEvents();
         }
         return new AsyncResult<>(ls);
     }

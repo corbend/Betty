@@ -8,9 +8,14 @@ import main.java.models.bets.LiveBet;
 import main.java.models.bets.UserBet;
 import main.java.models.users.User;
 
+import javax.annotation.Resource;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
+import javax.jms.JMSConnectionFactory;
+import javax.jms.JMSContext;
+import javax.jms.JMSProducer;
+import javax.jms.Queue;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import java.util.List;
@@ -26,11 +31,11 @@ public class BetManager {
     @PersistenceContext
     private EntityManager em;
 
-//    @Resource(name="jms/javaee7/ConnectionFactory")
-//    private ConnectionFactory jmsFactory;
-//
-//    @Resource(name="jsm/javaee7/AccountQueue")
-//    private Queue queue;
+    @Inject
+    @JMSConnectionFactory("jms/javaee7/ConnectionFactory")
+    private JMSContext context;
+    @Resource(lookup = "jms/javaee7/AccountActionQueue")
+    private Queue accountQueue;
 
     @EJB
     private UserEJB userEJB;
@@ -41,19 +46,21 @@ public class BetManager {
         UserBet bet = new UserBet();
         User usr = userEJB.getUser(userId);
 
-        AccountMessage checkAccountMsg = new AccountMessage("ACCOUNT_DECREMENT", "BET_ACTIVATE", usr.getAccountId(), amount);
-
+        AccountMessage checkAccountMsg = new AccountMessage("ACCOUNT_DEC", usr.getAccountId());
+        checkAccountMsg.setAmount(amount);
+        checkAccountMsg.setOutputMessage("UserBet:" + bet.getId() + ":hold");
         //создаем новую ставку и ждем подтвреждения списания средств
 
         bet.setUser(usr);
         bet.setLiveBet(liveBet);
         bet.setStatus(UserBet.Status.PENDING);
         bet.setAmount(amount);
+        bet.setCoefficient(liveBet.getCoefficient());
 
         em.persist(bet);
 
-//        JMSProducer prod = jmsFactory.createContext().createProducer();
-//        prod.send(queue, checkAccountMsg);
+        JMSProducer prod = context.createProducer();
+        prod.send(accountQueue, checkAccountMsg);
 
         //после подтверждения списания средств активируем ставку
         bet.setStatus(UserBet.Status.ACTIVE);
@@ -78,6 +85,9 @@ public class BetManager {
 
         bet.setStatus(UserBet.Status.RESOLVED);
         em.merge(bet);
+
+        LiveBet liveBet = bet.getLiveBet();
+        em.merge(liveBet);
     }
 
     public void freezeBet(Long betId) {
@@ -113,6 +123,10 @@ public class BetManager {
 
         List<UserBet> bets = em.createNamedQuery("UserBet.getActiveByUser", UserBet.class).getResultList();
         return bets;
+    }
+
+    public List<UserBet> getUserBetsByLiveBet(LiveBet liveBet) {
+        return em.createNamedQuery("UserBet.getByLiveBet", UserBet.class).setParameter("liveBet", liveBet).getResultList();
     }
 
     public void saveCustomBet(CustomBet cbet) {

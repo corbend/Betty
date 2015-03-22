@@ -5,6 +5,7 @@ import main.java.billing.managers.AccountEJB;
 import main.java.managers.messages.AccountMessage;
 import main.java.managers.resolvers.interfaces.BetResolveProvider;
 import main.java.managers.service.RedisManager;
+import main.java.models.bets.LiveBet;
 import main.java.models.bets.UserBet;
 import main.java.models.games.BetResult;
 import main.java.models.games.GameEvent;
@@ -65,9 +66,12 @@ public class SimpleBetResolver implements BetResolveProvider {
                 betToRedis.setResult(bet.getResult());
                 betToRedis.setStatus(bet.getStatus());
                 betToRedis.setUserName(bet.getUserName());
-
+                betToRedis.setCoefficient(bet.getCoefficient());
                 listOfBets.add(betToRedis);
-                em.persist(bet);
+                em.merge(bet);
+
+                LiveBet lbet = bet.getLiveBet();
+                em.merge(lbet);
             }
 
         }
@@ -80,21 +84,22 @@ public class SimpleBetResolver implements BetResolveProvider {
             ObjectMessage msg = context.createObjectMessage();
 
             AccountMessage body = new AccountMessage();
-            body.setAmount(h.getAmount());
-            body.setUsername(h.getRawUserName());
 
+            body.setAmount(h.getAmount() * h.getCoefficient());
+            body.setUsername(h.getRawUserName());
+            body.setReceiverJNDI("jms/javaee7/BetActionQueue");
+            body.setOutputMessage("UserBet:" + h.getId() + ":resolved");
             try {
-                //msg.setObject(body);
-                //context.createProducer().send(accountQueue, msg);
+
                 if (h.getResult()) {
                     body.setAction("ACCOUNT_INC");
-                    accountEJB.incrementBalance(h.getRawUserName(), h.getAmount());
                 } else {
                     body.setAction("ACCOUNT_DEC");
-                    accountEJB.decrementBalance(h.getRawUserName(), h.getAmount());
                 }
+                msg.setObject(body);
+                context.createProducer().send(accountQueue, msg);
 
-            } catch (JMSException | AccountEJB.NotEnoughFundsException e) {
+            } catch (JMSException e) {
                 e.printStackTrace();
                 log.log(Level.SEVERE, "User Bet Resolved, but not processed because of error=" + e.getMessage());
             }
