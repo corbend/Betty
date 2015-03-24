@@ -1,15 +1,15 @@
 package main.java.managers.service;
 
-import com.cedarsoftware.util.io.JsonWriter;
-import main.java.models.sys.ScheduleParser;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
+import redis.clients.jedis.JedisPool;
 
+import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.interceptor.Interceptors;
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
@@ -21,10 +21,24 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
 
     Logger log = Logger.getAnonymousLogger();
     Set clusterNodes = new HashSet<>();
+
+    private JedisPool pool;
     private JedisCluster cluster;
     private Jedis client;
     private String namespace;
+
     private Boolean inCluster = false;
+
+    public RedisManager(JedisPool pool, String namespace) {
+        this.namespace = namespace;
+        this.pool = pool;
+
+        if (!inCluster) {
+            client = pool.getResource();
+        } else {
+            throw new RuntimeException("not accepted constructor in Jedis Cluster!");
+        }
+    }
 
     public RedisManager(String host, int port, String namespace) {
 
@@ -38,136 +52,222 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
 
     }
 
+    public JedisPool getPool() {
+        return pool;
+    }
+
+    public Jedis getClient() {
+        return client;
+    }
+
+    public void setClient(Jedis client) {
+        this.client = client;
+    }
+
+    @Interceptors(RedisInterceptor.class)
     public T get(String key) {
+
+        Jedis src = pool.getResource();
         String value = "";
+        T result;
+        try {
+            if (inCluster) {
+                value = cluster.get(namespace + ":" + key);
+            } else {
+                value = src.get(namespace + ":" + key);
+            }
 
-        if (inCluster) {
-            value = cluster.get(namespace + ":" + key);
-        } else {
-            value = client.get(namespace + ":" + key);
+            result = (T) new MemoryObject<>(value).getObject();
+        } finally {
+            pool.returnResource(src);
         }
-
-        T result = (T) new MemoryObject<>(value).getObject();
         return result;
     }
 
+    @Interceptors(RedisInterceptor.class)
     public void set(T value) {
-        MemoryObject obj = new MemoryObject<>(value);
-        String setVal = obj.toString();
+        Jedis src = pool.getResource();
 
-        if (inCluster) {
-            cluster.set(namespace + ":" + obj.getId(), setVal);
-        } else {
-            client.set(namespace + ":" + obj.getId(), setVal);
-        }
-    }
+        try {
+            MemoryObject obj = new MemoryObject<>(value);
+            String setVal = obj.toString();
 
-    public void setRawKey(String key, Object item) {
-        if (inCluster) {
-            cluster.set(key, item.toString());
-        } else {
-            client.set(key, item.toString());
-        }
-    }
-
-    public Object getRawKey(String key) {
-        if (inCluster) {
-            return cluster.get(key);
-        } else {
-            return client.get(key);
-        }
-    }
-
-    public void pushDateList(String key, DateTime item) {
-        String dateString = item.toString(DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss"));
-        if (inCluster) {
-            cluster.lpush(key, dateString);
-        } else {
-            client.lpush(key, dateString);
-        }
-    }
-
-    public DateTime popDate(String key) {
-        if (inCluster) {
-            return DateTime.parse(cluster.rpop(key));
-        } else {
-            return DateTime.parse(client.rpop(key));
-        }
-    }
-
-    public void addList(String key, List<T> list) {
-
-        if (inCluster) {
-            cluster.del(key);
-        } else {
-            client.del(key);
-        }
-
-        for (T l: list) {
-            try {
-                //FIXME - есть проблема конвертации в JSON внутри контейнера
-                String toPush = new MemoryObject<>(l).toString();
-                if (inCluster) {
-                    cluster.lpush(key, toPush);
-                } else {
-                    client.lpush(key, toPush);
-                }
-            } catch (Exception e) {
-                log.log(Level.SEVERE, e.getMessage());
+            if (inCluster) {
+                cluster.set(namespace + ":" + obj.getId(), setVal);
+            } else {
+                src.set(namespace + ":" + obj.getId(), setVal);
             }
+        } finally {
+            pool.returnResource(src);
         }
     }
 
-    public List<T> getRange(String key, int start, int end) {
-        List<String> lst = new ArrayList<>();
-        if (inCluster) {
-            lst = cluster.lrange(key, start, end);
-        } else {
-            lst = client.lrange(key, start, end);
+    @Interceptors(RedisInterceptor.class)
+    public void setRawKey(String key, Object item) {
+        Jedis src = pool.getResource();
+        try {
+            if (inCluster) {
+                cluster.set(key, item.toString());
+            } else {
+                client.set(key, item.toString());
+            }
+        } finally {
+            pool.returnResource(src);
         }
+    }
+
+    @Interceptors(RedisInterceptor.class)
+    public Object getRawKey(String key) {
+        Jedis src = pool.getResource();
+        Object res;
+        try {
+            if (inCluster) {
+                res = cluster.get(key);
+            } else {
+                res = client.get(key);
+            }
+        } finally {
+            pool.returnResource(src);
+        }
+        return res;
+    }
+
+    @Interceptors(RedisInterceptor.class)
+    public void pushDateList(String key, DateTime item) {
+        Jedis src = pool.getResource();
+        try {
+            String dateString = item.toString(DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss"));
+            if (inCluster) {
+                cluster.lpush(key, dateString);
+            } else {
+                client.lpush(key, dateString);
+            }
+        } finally {
+            pool.returnResource(src);
+        }
+    }
+
+    @Interceptors(RedisInterceptor.class)
+    public DateTime popDate(String key) {
+        Jedis src = pool.getResource();
+        DateTime res;
+        try {
+            if (inCluster) {
+                res = DateTime.parse(cluster.rpop(key));
+            } else {
+                res = DateTime.parse(client.rpop(key));
+            }
+        } finally {
+            pool.returnResource(src);
+        }
+
+        return res;
+    }
+
+    @Interceptors(RedisInterceptor.class)
+    public void addList(String key, List<T> list) {
+        Jedis src = pool.getResource();
+
+        try {
+            if (inCluster) {
+                cluster.del(key);
+            } else {
+                client.del(key);
+            }
+
+            for (T l : list) {
+                try {
+                    //FIXME - есть проблема конвертации в JSON внутри контейнера
+                    String toPush = new MemoryObject<>(l).toString();
+                    if (inCluster) {
+                        cluster.lpush(key, toPush);
+                    } else {
+                        client.lpush(key, toPush);
+                    }
+                } catch (Exception e) {
+                    log.log(Level.SEVERE, e.getMessage());
+                }
+            }
+        } finally {
+            pool.returnResource(src);
+        }
+
+    }
+
+    @Interceptors(RedisInterceptor.class)
+    public List<T> getRange(String key, int start, int end) {
+        List<String> lst;
         List<T> convertedList = new ArrayList<>();
 
-        for (String stringObj: lst) {
-            T convertedObject = (T) new MemoryObject<T>(stringObj).getObject();
-            convertedList.add(convertedObject);
+        Jedis src = pool.getResource();
+
+        try {
+            if (inCluster) {
+                lst = cluster.lrange(key, start, end);
+            } else {
+                lst = src.lrange(key, start, end);
+            }
+
+            for (String stringObj : lst) {
+                T convertedObject = (T) new MemoryObject<T>(stringObj).getObject();
+                convertedList.add(convertedObject);
+            }
+        } finally {
+            pool.returnResource(src);
         }
 
         return convertedList;
     }
 
+    @Interceptors(RedisInterceptor.class)
     public List<T> getRangeString(String key, int start, int end, T clonable) {
 
-        List<String> lst = new ArrayList<>();
-        if (inCluster) {
-            lst = cluster.lrange(key, start, end);
-        } else {
-            lst = client.lrange(key, start, end);
-        }
+        List<String> lst;
         List<T> convertedList = new ArrayList<>();
+        Jedis src = pool.getResource();
 
-        for (String stringObj: lst) {
-            try {
-                T clone = (T) clonable.getClass().getMethod("clone").invoke(clonable);
-                convertedList.add(clone);
-            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
-                log.log(Level.SEVERE, e.getMessage());
+        try {
+            if (inCluster) {
+                lst = cluster.lrange(key, start, end);
+            } else {
+                lst = client.lrange(key, start, end);
             }
 
+            for (String stringObj : lst) {
+                try {
+                    T clone = (T) clonable.getClass().getMethod("clone").invoke(clonable);
+                    convertedList.add(clone);
+                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                    e.printStackTrace();
+                    log.log(Level.SEVERE, e.getMessage());
+                }
+
+            }
+        } finally {
+            pool.returnResource(src);
         }
 
         return convertedList;
     }
 
+    @Interceptors(RedisInterceptor.class)
     public List<T> trimList(String key, int start, int end) {
 
-        if (inCluster) {
-            cluster.ltrim(key, start, end);
-        } else {
-            client.ltrim(key, start, end);
+        List<T> res;
+        Jedis src = pool.getResource();
+
+        try {
+            if (inCluster) {
+                cluster.ltrim(key, start, end);
+            } else {
+                client.ltrim(key, start, end);
+            }
+            res = getRange(key, 0, -1);
+        } finally {
+            pool.returnResource(src);
         }
 
-        return getRange(key, 0, -1);
+        return res;
     }
 
     public void close() {

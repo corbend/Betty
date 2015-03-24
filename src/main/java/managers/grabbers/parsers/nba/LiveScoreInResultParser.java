@@ -1,6 +1,5 @@
 package main.java.managers.grabbers.parsers.nba;
 
-import main.java.managers.grabbers.parsers.ResultParser;
 import main.java.managers.service.RedisManager;
 import main.java.models.games.Game;
 import main.java.models.games.GameEvent;
@@ -13,7 +12,7 @@ import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
-import javax.ejb.Stateless;
+import javax.ejb.Singleton;
 import javax.inject.Inject;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -24,8 +23,8 @@ import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-@Stateless
-public class LiveScoreInResultParser extends ResultParser {
+@Singleton
+public class LiveScoreInResultParser {
 
     private String url = "http://www.livescore.in/ru/";
 
@@ -35,11 +34,6 @@ public class LiveScoreInResultParser extends ResultParser {
     private RedisManager<GameEvent> redisManager;
 
     private static String rootClass = "table-main";
-
-    public LiveScoreInResultParser() {
-        super();
-    }
-    public LiveScoreInResultParser(ScheduleParser parser) { super(parser); }
 
     private GameEvent searchInStorage(List<GameEvent> activeGames,
                                             GameEvent checkGame) {
@@ -144,12 +138,6 @@ public class LiveScoreInResultParser extends ResultParser {
 
     private List<GameEvent> basketballParser(Game game) {
         //костыль (нужно понять почему не инжектится зависимость
-        boolean closeRedis = false;
-
-        if (redisManager == null) {
-            redisManager = new RedisManager<>("localhost", 6379, "GameEvent");
-            closeRedis = true;
-        }
 
         List<GameEvent> activeGames = redisManager.getRange("GameEvent", 0, -1);
 
@@ -158,7 +146,8 @@ public class LiveScoreInResultParser extends ResultParser {
         log.log(Level.INFO, "Check ended games=>" + activeGames.size());
         try {
             driver = new RemoteWebDriver(new URL("http://localhost:9515"), DesiredCapabilities.chrome());
-            driver.get(url);
+            String targetUrl = url.substring(0) + game.getName();
+            driver.get(targetUrl);
 
             (new WebDriverWait(driver, 10)).until(new ExpectedCondition<Boolean>() {
                 public Boolean apply(WebDriver d) {
@@ -217,9 +206,6 @@ public class LiveScoreInResultParser extends ResultParser {
                 driver.quit();
             }
 
-            if (closeRedis) {
-                redisManager.close();
-            }
         }
 
     }
@@ -227,7 +213,6 @@ public class LiveScoreInResultParser extends ResultParser {
     public List<GameEvent> parseFor(Game game) {
 
         String gameName = game.getName();
-        url += gameName;
 
         switch (gameName) {
             case "basketball":
@@ -238,10 +223,11 @@ public class LiveScoreInResultParser extends ResultParser {
 
     }
 
-    public List<GameEvent> parse(Game game) {
+    public List<GameEvent> parse(ScheduleParser parser, Game game) {
 
+        log.log(Level.INFO, "PREPARE TO PARSE SCORE->");
         List<GameEvent> results = parseFor(game);
 
-        return results;
+        return new ArrayList<>();
     }
 }

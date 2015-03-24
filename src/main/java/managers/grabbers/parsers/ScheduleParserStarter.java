@@ -2,10 +2,7 @@ package main.java.managers.grabbers.parsers;
 
 import main.java.managers.games.GameManager;
 import main.java.managers.games.GameSheduleManager;
-import main.java.managers.grabbers.parsers.interfaces.ParserFactory;
-import main.java.managers.grabbers.parsers.qualifiers.EventSchedule;
-import main.java.managers.loggers.ConcreteLogger;
-import main.java.managers.loggers.interfaces.SystemEventLogger;
+import main.java.managers.grabbers.ScheduleParserFactory;
 import main.java.managers.service.RedisManager;
 import main.java.models.games.Game;
 import main.java.models.games.GameEvent;
@@ -30,7 +27,6 @@ import java.util.logging.Logger;
 
 @Startup
 @Singleton
-@Interceptors(ConcreteLogger.class)
 public class ScheduleParserStarter {
 
     private Logger log = Logger.getAnonymousLogger();
@@ -50,15 +46,14 @@ public class ScheduleParserStarter {
     @Inject
     private RedisManager<GameEvent> gameEventRedisManager;
 
-    @Inject @EventSchedule
-    private ParserFactory<EventParser, ScheduleParser> eventParserFactory;
+    @EJB
+    private ScheduleParserFactory eventParserFactory;
 
     @EJB
     private GameManager gameManager;
 
     @EJB
     private GameSheduleManager gameEventManager;
-
 
     private Boolean isNeedForNewSchedule(Game game, Date date) {
 
@@ -134,6 +129,7 @@ public class ScheduleParserStarter {
         }
 
         createNewSchedule();
+
     }
 
     @PreDestroy
@@ -167,13 +163,7 @@ public class ScheduleParserStarter {
     public void getNewSchedules(Timer timer) {
 
         List<ScheduleParser> parsers = redisManager.getRange("Parsers", 0, 10);
-        DateTime lastDate = DateTime.parse((String) redisManager.getRawKey(REDIS_LAST_SCHEDULE_DATE_KEY));
-        //если последняя дата расписания меньше текущей даты
-        //то нужно запланировать новое расписание
-        if (lastDate.isBeforeNow()) {
-            log.log(Level.INFO, "Schedule Reinit ->Last Checked Time=" + lastDate);
-            createNewSchedule();
-        }
+
         log.log(Level.INFO, "Schedule Prepare Next->");
         DateTime date = redisManager.popDate(REDIS_NEXT_SCHEDULE_DATE_KEY);
 
@@ -199,6 +189,21 @@ public class ScheduleParserStarter {
 
     }
 
+    @Schedule(dayOfMonth = "*", hour="0", persistent=false)
+    public void setNextScheduleDate() {
+        try {
+            DateTime lastDate = DateTime.parse((String) redisManager.getRawKey(REDIS_LAST_SCHEDULE_DATE_KEY));
+            //если последняя дата расписания меньше текущей даты
+            //то нужно запланировать новое расписание
+            if (lastDate.minusDays(1).isBeforeNow()) {
+                log.log(Level.INFO, "Schedule Reinit ->Last Checked Time=" + lastDate);
+                createNewSchedule();
+            }
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "Schedule is not fill! - ERROR:" + e.getMessage());
+        }
+    }
+
     @Schedule(minute="*/2", hour="*", persistent=false)
     public void checkParserActiveState() {
 
@@ -222,6 +227,7 @@ public class ScheduleParserStarter {
                 log.log(Level.SEVERE, "Parser->" + parser.getName() + "is in abnormal state.");
             }
         }
+
         log.log(Level.INFO, "PARSERS HEALTH CHECK->DONE");
     }
 
@@ -234,8 +240,9 @@ public class ScheduleParserStarter {
             date = DateTime.now();
         }
 
-        List<GameEvent> ls = (eventParserFactory.create(parser)).parse(
+        List<GameEvent> ls = eventParserFactory.parseByName(parser,
                 activeGames.get(0), date.getYear(), date.getMonthOfYear(), date.getDayOfMonth());
+
         //FIXME - костыль для тестирования
 
         log.log(Level.INFO, "LIST OF PREPARED SCHEDULE->" + ls.size() + ", date=" + date);

@@ -1,28 +1,31 @@
 package main.java.managers.grabbers;
 
-import main.java.managers.grabbers.parsers.ResultParser;
-import main.java.managers.grabbers.parsers.interfaces.ParserFactory;
-import main.java.managers.grabbers.parsers.nba.LiveScoreInParser;
 import main.java.managers.grabbers.parsers.nba.LiveScoreInResultParser;
-import main.java.managers.grabbers.parsers.qualifiers.ResultCheck;
+import main.java.models.games.Game;
+import main.java.models.games.GameEvent;
 import main.java.models.sys.ScheduleParser;
 
-import java.util.HashMap;
-import java.util.Map;
+import javax.ejb.EJB;
+import javax.ejb.Singleton;
+import java.util.ArrayList;
+import java.util.List;
 
-@ResultCheck
-public class ResultsParserFactory implements ParserFactory<ResultParser, ScheduleParser> {
+@Singleton
+public class ResultsParserFactory {
     //фабрика парсеров результатов матчей
-    private Map<String, Class<? extends ResultParser>> parserPool = new HashMap<>();
+    @EJB
+    private LiveScoreInResultParser scoreParser;
 
-    public ResultsParserFactory() {
+    public List<GameEvent> parseByName(ScheduleParser persistentParser, Game game) {
 
-        parserPool.put("livescore.in", LiveScoreInResultParser.class);
-    }
+        String name = persistentParser.getName();
+        List<GameEvent> res = new ArrayList<>();
+        switch(name) {
+            case "livescore.in":
+                res = scoreParser.parse(persistentParser, game);
+                break;
+        }
 
-    public ResultParser create(ScheduleParser persistentParser) throws InstantiationException, IllegalAccessException {
-        ResultParser p = parserPool.get(persistentParser.getName()).newInstance();
-        p.setPersistenceParser(persistentParser);
-        return p;
+        return res;
     }
 }

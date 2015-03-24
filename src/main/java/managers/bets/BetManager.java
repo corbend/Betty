@@ -1,7 +1,6 @@
 package main.java.managers.bets;
 
 import main.java.managers.messages.AccountMessage;
-import main.java.managers.service.RedisManager;
 import main.java.managers.users.UserEJB;
 import main.java.models.bets.CustomBet;
 import main.java.models.bets.LiveBet;

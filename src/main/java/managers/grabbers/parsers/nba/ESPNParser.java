@@ -6,8 +6,7 @@ import main.java.models.games.Game;
 import main.java.models.games.GameEvent;
 import main.java.models.sys.ScheduleParser;
 import org.joda.time.DateTime;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Node;
+
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -15,32 +14,25 @@ import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
-import javax.ejb.Stateless;
+import javax.ejb.Singleton;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
 import java.util.List;
 
-@Stateless
+
+@Singleton
 public class ESPNParser extends EventParser {
 
     String url = "http://espn.go.com/travel/sports/calendar/?date={{date}}&type=list";
-
-    public ESPNParser() {
-        super();
-    }
 
     @PersistenceContext
     private EntityManager em;
 
     private RedisManager<ScheduleParser> redisManager;
 
-    ESPNParser(ScheduleParser persistenceParser) {
-        super(persistenceParser);
-    }
-
-    public List<GameEvent> parse(Game game, int forYear, int forMonth, int forDate) {
+    public List<GameEvent> parse(ScheduleParser parser, Game game, int forYear, int forMonth, int forDate) {
 
         Boolean status = false;
 
@@ -108,17 +100,14 @@ public class ESPNParser extends EventParser {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            driver.quit();
         }
-        //Close the browser
-        driver.quit();
 
-        List<ScheduleParser> l = new ArrayList<>();
-        ScheduleParser parser = getPersistenceParser();
         parser.setStatus(status);
-        //parser.setLastCompleteTime(DateTime.now());
-        l.add(parser);
-
-        redisManager.addList("Parsers", l);
+        if (status) {
+            parser.setLastCompleteTime(DateTime.now());
+        }
 
         return shedules;
     }

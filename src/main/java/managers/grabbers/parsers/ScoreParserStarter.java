@@ -1,8 +1,7 @@
 package main.java.managers.grabbers.parsers;
 
 import main.java.managers.games.GameManager;
-import main.java.managers.grabbers.parsers.interfaces.ParserFactory;
-import main.java.managers.grabbers.parsers.qualifiers.ResultCheck;
+import main.java.managers.grabbers.ResultsParserFactory;
 import main.java.managers.service.RedisManager;
 import main.java.models.games.Game;
 import main.java.models.games.GameEvent;
@@ -16,7 +15,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Startup
-@Stateless
+@Singleton
 public class ScoreParserStarter {
 
     private Logger log = Logger.getAnonymousLogger();
@@ -24,14 +23,11 @@ public class ScoreParserStarter {
     @Inject
     private RedisManager<ScheduleParser> redisManager;
 
-    @Inject
-    private RedisManager<GameEvent> gameEventRedisManager;
-
     @EJB
     private GameManager gameManager;
 
-    @Inject @ResultCheck
-    private ParserFactory<ResultParser, ScheduleParser> scoreParserFactory;
+    @EJB
+    private ResultsParserFactory scoreParserFactory;
 
     @Schedule(second="*/20", minute="*", hour="*", persistent = false, timezone="Europe/Moscow")
     public void parseGameResults() {
@@ -54,8 +50,7 @@ public class ScoreParserStarter {
     public Future<List<GameEvent>> executeResultParser(ScheduleParser parser) throws InstantiationException, IllegalAccessException {
         List<Game> activeGames = gameManager.getAllActiveGames();
 
-        List<GameEvent> ls = (scoreParserFactory.create(parser)).parse(
-                activeGames.get(0));
+        List<GameEvent> ls = scoreParserFactory.parseByName(parser, activeGames.get(0));
 
         return new AsyncResult<>(ls);
     }
