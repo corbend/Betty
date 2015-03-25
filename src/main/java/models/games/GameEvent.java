@@ -163,6 +163,16 @@ public class GameEvent implements Serializable {
         this.scores2 = scores;
     }
 
+    @Transient
+    private String gameName;
+    public String getGameName() {
+        return gameName;
+    }
+
+    public void setGameName(String gameName) {
+        this.gameName = gameName;
+    }
+
     @Override
     public String toString() {
         return this.getEventName() + "<->" + getEventLocation() + "<->" + getTeam1Name() + "<->" + getTeam2Name();

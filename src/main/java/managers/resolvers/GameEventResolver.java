@@ -74,45 +74,45 @@ public class GameEventResolver {
     public void checkAllEndedEvents() throws JMSException {
 
         //проверяем завершенность всех матчей
-        curDate = new Date();
-        curDate.setSeconds(0);
+        List<Game> games = gameManager.getAllActiveGames();
 
-        List<GameEvent> gameEvents = gameEventPoolManager.getRange("GameEvent", 0, -1);
+        for (Game game: games) {
+            List<GameEvent> gameEvents = gameEventPoolManager.getRange("GameEvent:" + game.getName(), 0, -1);
 
-        if (gameEvents != null) {
-            for (GameEvent event: gameEvents) {
-                log.log(Level.WARNING, "Event Check:" + event.getId());
-                GameEvent inMemoryGame = gameEventPoolManager.get(event.getId().toString());
-                //наличие по данному ключу данных, означает окончание игры
-                if (inMemoryGame == null) {
-                    log.log(Level.WARNING, "Event:" + event.toString() + "-> progress.");
-                } else {
-                    ObjectMessage msg = context.createObjectMessage();
+            if (gameEvents != null) {
+                for (GameEvent event : gameEvents) {
+                    log.log(Level.WARNING, "Event Check:" + event.getId());
+                    GameEvent inMemoryGame = gameEventPoolManager.get(event.getId().toString());
+                    //наличие по данному ключу данных, означает окончание игры
+                    if (inMemoryGame == null) {
+                        log.log(Level.WARNING, "Event:" + event.toString() + "-> progress.");
+                    } else {
+                        ObjectMessage msg = context.createObjectMessage();
 
-                    int score1 = inMemoryGame.getScores1().get(0);
-                    int score2 = inMemoryGame.getScores2().get(0);
+                        int score1 = inMemoryGame.getScores1().get(0);
+                        int score2 = inMemoryGame.getScores2().get(0);
 
-                    GameEvent clone = new GameEvent();
+                        GameEvent clone = new GameEvent();
 
-                    clone.setId(event.getId());
-                    clone.setEventLocation(event.getEventLocation());
-                    clone.setEventName(event.getEventName());
-                    clone.setEventTime(event.getEventTime());
-                    clone.setDateStart(event.getDateStart());
-                    clone.setDateEnd(event.getDateEnd());
-                    clone.setTeam1Name(event.getTeam1Name());
-                    clone.setTeam2Name(event.getTeam2Name());
+                        clone.setId(event.getId());
+                        clone.setEventLocation(event.getEventLocation());
+                        clone.setEventName(event.getEventName());
+                        clone.setEventTime(event.getEventTime());
+                        clone.setDateStart(event.getDateStart());
+                        clone.setDateEnd(event.getDateEnd());
+                        clone.setTeam1Name(event.getTeam1Name());
+                        clone.setTeam2Name(event.getTeam2Name());
 
-                    GameEventMessage outm = new GameEventMessage(event, score1, score2);
-                    msg.setObject(outm);
-                    log.log(Level.WARNING, "Event:" + event.toString() + "-> finished.");
-                    context.createProducer().send(eventsQueue, msg);
+                        GameEventMessage outm = new GameEventMessage(event, score1, score2);
+                        msg.setObject(outm);
+                        log.log(Level.WARNING, "Event:" + event.toString() + "-> finished.");
+                        context.createProducer().send(eventsQueue, msg);
 
-                    //TODO - сделать удаление события после разрешения всех ставок из памяти
+                        //TODO - сделать удаление события после разрешения всех ставок из памяти
+                    }
                 }
             }
         }
-
         //extractToPool();
     }
 

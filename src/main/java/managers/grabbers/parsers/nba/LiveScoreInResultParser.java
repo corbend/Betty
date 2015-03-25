@@ -139,7 +139,7 @@ public class LiveScoreInResultParser {
     private List<GameEvent> basketballParser(Game game) {
         //костыль (нужно понять почему не инжектится зависимость
 
-        List<GameEvent> activeGames = redisManager.getRange("GameEvent", 0, -1);
+        List<GameEvent> activeGames = redisManager.getRange("GameEvent:" + game.getName(), 0, -1);
 
         WebDriver driver = null;
 
@@ -226,8 +226,8 @@ public class LiveScoreInResultParser {
     public List<GameEvent> parse(ScheduleParser parser, Game game) {
 
         log.log(Level.INFO, "PREPARE TO PARSE SCORE->");
-        List<GameEvent> results = parseFor(game);
 
-        return new ArrayList<>();
+        List<GameEvent> results = parseFor(game);
+        return results;
     }
 }

@@ -6,6 +6,7 @@ import main.java.models.games.Game;
 import javax.ejb.LocalBean;
 import javax.ejb.Stateless;
 import javax.persistence.*;
+import java.util.ArrayList;
 import java.util.List;
 
 @Stateless
@@ -60,8 +61,14 @@ public class GameManager {
         em.persist(game);
     }
 
+    public List<String> getGameNames(List<Game> games) {
 
-    //public void setAvailableParser(Game game, EventParser parser) {
-//        game.setParser();
-//    }
+        List<String> gameNames = new ArrayList<>();
+
+        for (Game game: games) {
+            gameNames.add(game.getName());
+        }
+
+        return gameNames;
+    }
 }
