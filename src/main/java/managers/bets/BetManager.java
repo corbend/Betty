@@ -9,6 +9,7 @@ import main.java.models.users.User;
 
 import javax.annotation.Resource;
 import javax.ejb.EJB;
+import javax.ejb.SessionContext;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import javax.jms.JMSConnectionFactory;
@@ -17,6 +18,7 @@ import javax.jms.JMSProducer;
 import javax.jms.Queue;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -39,6 +41,9 @@ public class BetManager {
     @EJB
     private UserEJB userEJB;
 
+    @Resource
+    private SessionContext sessionContext;
+
 
     public UserBet putBet(String userId, LiveBet liveBet, Double amount) {
 
@@ -47,7 +52,8 @@ public class BetManager {
 
         AccountMessage checkAccountMsg = new AccountMessage("ACCOUNT_DEC", usr.getAccountId());
         checkAccountMsg.setAmount(amount);
-        checkAccountMsg.setOutputMessage("UserBet:" + bet.getId() + ":hold");
+        checkAccountMsg.setUsername(sessionContext.getCallerPrincipal().getName());
+        checkAccountMsg.setReceiverJNDI("jms/javaee7/BetActionQueue");
         //создаем новую ставку и ждем подтвреждения списания средств
 
         bet.setUser(usr);
@@ -58,12 +64,9 @@ public class BetManager {
 
         em.persist(bet);
 
+        checkAccountMsg.setOutputMessage("UserBet:" + bet.getId() + ":hold");
         JMSProducer prod = context.createProducer();
         prod.send(accountQueue, checkAccountMsg);
-
-        //после подтверждения списания средств активируем ставку
-        bet.setStatus(UserBet.Status.ACTIVE);
-        em.merge(bet);
 
         return bet;
     }
@@ -73,6 +76,7 @@ public class BetManager {
         UserBet bet = em.find(UserBet.class, betId);
 
         bet.setStatus(UserBet.Status.ACTIVE);
+        bet.setAcquiredDate(new Date());
         em.merge(bet);
 
         return bet;
@@ -83,6 +87,7 @@ public class BetManager {
         UserBet bet = em.find(UserBet.class, betId);
 
         bet.setStatus(UserBet.Status.RESOLVED);
+        bet.setResolvedDate(new Date());
         em.merge(bet);
 
         LiveBet liveBet = bet.getLiveBet();

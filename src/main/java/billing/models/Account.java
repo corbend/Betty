@@ -32,11 +32,9 @@ public class Account {
     private Date createdDate;
 
     @OneToMany(mappedBy="destAccount", cascade = CascadeType.PERSIST)
-    @JoinColumn(name="dest_account_id")
     private List<Transaction> inTransactions;
 
     @OneToMany(mappedBy="srcAccount", cascade = CascadeType.PERSIST)
-    @JoinColumn(name="src_account_id")
     private List<Transaction> outTransactions;
 
     public Long getId() {

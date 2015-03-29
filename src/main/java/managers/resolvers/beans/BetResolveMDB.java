@@ -1,6 +1,7 @@
 package main.java.managers.resolvers.beans;
 
 import main.java.managers.bets.BetManager;
+import main.java.models.bets.UserBet;
 
 import javax.ejb.ActivationConfigProperty;
 import javax.ejb.EJB;
@@ -49,6 +50,7 @@ public class BetResolveMDB implements MessageListener {
                         break;
                     case "hold":
                         betManager.activateBet(betId);
+                        //после подтверждения списания средств активируем ставку
                         log.log(Level.INFO, "USER BET ACTIVATED->" + betId);
                 }
             }

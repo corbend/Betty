@@ -93,11 +93,11 @@ public class SimpleBetResolver implements BetResolveProvider {
 
                 if (h.getResult()) {
                     body.setAction("ACCOUNT_INC");
+                    msg.setObject(body);
+                    context.createProducer().send(accountQueue, msg);
                 } else {
                     body.setAction("ACCOUNT_DEC");
                 }
-                msg.setObject(body);
-                context.createProducer().send(accountQueue, msg);
 
             } catch (JMSException e) {
                 e.printStackTrace();

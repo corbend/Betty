@@ -22,8 +22,10 @@ public class Transaction {
         this.id = id;
     }
 
+    @JoinColumn(name="srcaccount_id")
     private Account srcAccount;
 
+    @JoinColumn(name="destaccount_id")
     private Account destAccount;
 
     private Double amount;

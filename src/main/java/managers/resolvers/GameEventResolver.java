@@ -102,10 +102,11 @@ public class GameEventResolver {
                         clone.setDateEnd(event.getDateEnd());
                         clone.setTeam1Name(event.getTeam1Name());
                         clone.setTeam2Name(event.getTeam2Name());
+                        clone.clearActivateBetTypes();
 
-                        GameEventMessage outm = new GameEventMessage(event, score1, score2);
+                        GameEventMessage outm = new GameEventMessage(clone, score1, score2);
                         msg.setObject(outm);
-                        //log.log(Level.WARNING, "Event:" + event.toString() + "-> finished.");
+                        log.log(Level.WARNING, "Event:" + event.toString() + "-> finished.");
                         context.createProducer().send(eventsQueue, msg);
 
                         //TODO - сделать удаление события после разрешения всех ставок из памяти

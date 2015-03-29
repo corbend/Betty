@@ -34,4 +34,19 @@ public abstract class UserTemporal {
     @Temporal(value=TemporalType.DATE)
     private Date resolvedDate;
 
+    public Date getAcquiredDate() {
+        return acquiredDate;
+    }
+
+    public void setAcquiredDate(Date acquiredDate) {
+        this.acquiredDate = acquiredDate;
+    }
+
+    public Date getResolvedDate() {
+        return resolvedDate;
+    }
+
+    public void setResolvedDate(Date resolvedDate) {
+        this.resolvedDate = resolvedDate;
+    }
 }

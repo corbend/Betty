@@ -24,16 +24,6 @@ import javax.inject.Inject;
 @Singleton
 public class RedisProvider {
 
-    private static JedisPool pool;
-
-    private static JedisPool getPool() {
-        if (pool == null) {
-            pool = new JedisPool("localhost");
-        }
-
-        return pool;
-    }
-
     @EJB
     private JedisPoolProvider jedisPoolProvider;
     private RedisManager<ScheduleParser> scheduleRedisManager;

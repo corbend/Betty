@@ -22,9 +22,8 @@ public class TransactionEJB {
     private void manageInputTransaction(Account acc, Transaction transaction) throws AccountLockedException {
 
         if (!acc.isLocked()) {
-            List<Transaction> trInList = acc.getInTransactions();
-            trInList.add(transaction);
-
+            em.persist(transaction);
+            acc.getInTransactions().add(transaction);
             em.merge(acc);
         } else {
             throw new AccountLockedException();
@@ -34,9 +33,8 @@ public class TransactionEJB {
     private void manageOutputTransaction(Account acc, Transaction transaction) throws AccountLockedException {
 
         if (!acc.isLocked()) {
-            List<Transaction> trOutList = acc.getOutTransactions();
-            trOutList.add(transaction);
-
+            em.persist(transaction);
+            acc.getOutTransactions().add(transaction);
             em.merge(acc);
         } else {
             throw new AccountLockedException();

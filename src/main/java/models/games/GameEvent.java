@@ -197,6 +197,10 @@ public class GameEvent implements Serializable {
         }
     }
 
+    public void clearActivateBetTypes() {
+        activateBetTypes = null;
+    }
+
     public List<LiveBet> getLiveBets() {
         return liveBets;
     }

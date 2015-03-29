@@ -6,6 +6,7 @@ import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.exceptions.JedisConnectionException;
 import redis.clients.jedis.exceptions.JedisException;
 
 import javax.ejb.Stateless;
@@ -35,7 +36,7 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
         this.pool = pool;
 
         if (!inCluster) {
-            client = pool.getResource();
+            log.log(Level.INFO, "REDIS MANAGER-init");
         } else {
             throw new RuntimeException("not accepted constructor in Jedis Cluster!");
         }
@@ -60,7 +61,6 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
     public Jedis getClient() {
         return client;
     }
-
     public void setClient(Jedis client) {
         this.client = client;
     }
@@ -70,7 +70,7 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
 
         Jedis src = pool.getResource();
         String value = "";
-        T result;
+        T result = null;
         try {
             if (inCluster) {
                 value = cluster.get(namespace + ":" + key);
@@ -79,6 +79,8 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
             }
 
             result = (T) new MemoryObject<>(value).getObject();
+        } catch (Exception e) {
+            log.log(Level.SEVERE, e.toString());
         } finally {
             try {
                 pool.returnResource(src);
@@ -102,6 +104,8 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
             } else {
                 src.set(namespace + ":" + obj.getId(), setVal);
             }
+        } catch (JedisException e) {
+            log.log(Level.SEVERE, e.toString());
         } finally {
             try {
                 pool.returnResource(src);
@@ -118,8 +122,10 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
             if (inCluster) {
                 cluster.set(key, item.toString());
             } else {
-                client.set(key, item.toString());
+                src.set(key, item.toString());
             }
+        } catch (JedisException e) {
+            log.log(Level.SEVERE, e.toString());
         } finally {
             try {
                 pool.returnResource(src);
@@ -132,18 +138,20 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
     @Interceptors(RedisInterceptor.class)
     public Object getRawKey(String key) {
         Jedis src = pool.getResource();
-        Object res;
+        Object res = null;
         try {
             if (inCluster) {
                 res = cluster.get(key);
             } else {
-                res = client.get(key);
+                res = src.get(key);
             }
+        } catch (JedisException e) {
+            log.log(Level.SEVERE, e.toString());
         } finally {
             try {
                 pool.returnResource(src);
             } catch (JedisException e) {
-                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+                log.log(Level.SEVERE, "Jedis Critical Error->" + e.toString());
             }
         }
         return res;
@@ -157,13 +165,15 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
             if (inCluster) {
                 cluster.lpush(key, dateString);
             } else {
-                client.lpush(key, dateString);
+                src.lpush(key, dateString);
             }
+        } catch (JedisException e) {
+            log.log(Level.SEVERE, e.toString());
         } finally {
             try {
                 pool.returnResource(src);
             } catch (JedisException e) {
-                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+                log.log(Level.SEVERE, "Jedis Critical Error->" + e.toString());
             }
         }
     }
@@ -171,18 +181,20 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
     @Interceptors(RedisInterceptor.class)
     public DateTime popDate(String key) {
         Jedis src = pool.getResource();
-        DateTime res;
+        DateTime res = null;
         try {
             if (inCluster) {
                 res = DateTime.parse(cluster.rpop(key));
             } else {
-                res = DateTime.parse(client.rpop(key));
+                res = DateTime.parse(src.rpop(key));
             }
+        } catch (JedisException e) {
+            log.log(Level.SEVERE, e.toString());
         } finally {
             try {
                 pool.returnResource(src);
             } catch (JedisException e) {
-                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+                log.log(Level.SEVERE, "Jedis Critical Error->" + e.toString());
             }
         }
 
@@ -197,7 +209,7 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
             if (inCluster) {
                 cluster.del(key);
             } else {
-                client.del(key);
+                src.del(key);
             }
 
             for (T l : list) {
@@ -207,12 +219,14 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
                     if (inCluster) {
                         cluster.lpush(key, toPush);
                     } else {
-                        client.lpush(key, toPush);
+                        src.lpush(key, toPush);
                     }
                 } catch (Exception e) {
                     log.log(Level.SEVERE, e.getMessage());
                 }
             }
+        } catch (JedisException e) {
+            log.log(Level.SEVERE, e.toString());
         } finally {
             try {
                 pool.returnResource(src);
@@ -241,6 +255,8 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
                 T convertedObject = (T) new MemoryObject<T>(stringObj).getObject();
                 convertedList.add(convertedObject);
             }
+        } catch (JedisException e) {
+            log.log(Level.SEVERE, e.toString());
         } finally {
             try {
                 pool.returnResource(src);
@@ -263,7 +279,7 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
             if (inCluster) {
                 lst = cluster.lrange(key, start, end);
             } else {
-                lst = client.lrange(key, start, end);
+                lst = src.lrange(key, start, end);
             }
 
             for (String stringObj : lst) {
@@ -290,21 +306,23 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
     @Interceptors(RedisInterceptor.class)
     public List<T> trimList(String key, int start, int end) {
 
-        List<T> res;
+        List<T> res = null;
         Jedis src = pool.getResource();
 
         try {
             if (inCluster) {
                 cluster.ltrim(key, start, end);
             } else {
-                client.ltrim(key, start, end);
+                src.ltrim(key, start, end);
             }
             res = getRange(key, 0, -1);
+        } catch (JedisException e) {
+            log.log(Level.SEVERE, e.toString());
         } finally {
             try {
                 pool.returnResource(src);
             } catch (JedisException e) {
-                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+                log.log(Level.SEVERE, "Jedis Critical Error->" + e.toString());
             }
         }
 
