@@ -62,7 +62,7 @@ public class LiveScoreInResultParser {
 
     private void parseGameStat(int commandLine, GameEvent gameEvent, WebElement root) {
 
-        log.log(Level.INFO, "FIND ENDED GAME=" + gameEvent.getEventName() + "," + gameEvent.getEventLocation());
+        //log.log(Level.INFO, "FIND ENDED GAME=" + gameEvent.getEventName() + "," + gameEvent.getEventLocation());
         String teamName = root.findElement(By.className("padl")).getText();
 
         if (commandLine == 0) {
@@ -76,7 +76,7 @@ public class LiveScoreInResultParser {
             gameEvent.setDateStart(new Date());
             gameEvent.setDateEnd(new Date());
 
-            log.log(Level.INFO, "TEAM 1=" + teamName + "," + eventTime);
+            //log.log(Level.INFO, "TEAM 1=" + teamName + "," + eventTime);
             //событие отменено
             if (timeCell.getAttribute("class").contains("canceled")) {
                 return;
@@ -92,7 +92,7 @@ public class LiveScoreInResultParser {
             rawScore.add(root.findElement(By.className("cell_sg")).getText());
             rawScore.add(root.findElement(By.className("cell_sh")).getText());
 
-            log.log(Level.INFO, "SCORE TEAM1 INFO=" + rawScore);
+            //log.log(Level.INFO, "SCORE TEAM1 INFO=" + rawScore);
 
             for (int i = 0; i < 6; i++) {
                 String score = rawScore.get(i);
@@ -107,7 +107,7 @@ public class LiveScoreInResultParser {
 
         } else {
 
-            log.log(Level.INFO, "TEAM 2=" + teamName);
+            //log.log(Level.INFO, "TEAM 2=" + teamName);
 
             List<String> rawScore = new ArrayList<>();
             List<Integer> scores = new ArrayList<>();
@@ -119,7 +119,7 @@ public class LiveScoreInResultParser {
             rawScore.add(root.findElement(By.className("cell_te")).getText());
             rawScore.add(root.findElement(By.className("cell_tf")).getText());
 
-            log.log(Level.INFO, "SCORE TEAM2 INFO=" + rawScore);
+            //log.log(Level.INFO, "SCORE TEAM2 INFO=" + rawScore);
 
             for (int i = 0; i < 6; i++) {
                 String score = rawScore.get(i);
@@ -190,7 +190,7 @@ public class LiveScoreInResultParser {
                         newGameEvent.setId(inMemory.getId());
                         redisManager.set(newGameEvent);
                         shedules.add(newGameEvent);
-                        log.log(Level.INFO, "SCORE RESULTS PARSED->GAME FINISHED=" + inMemory.getId() + "," + newGameEvent);
+                        //log.log(Level.INFO, "SCORE RESULTS PARSED->GAME FINISHED=" + inMemory.getId() + "," + newGameEvent);
                     }
 
                     c++;
@@ -203,7 +203,7 @@ public class LiveScoreInResultParser {
             return new ArrayList<>();
         } finally {
             if (driver != null) {
-                driver.quit();
+                driver.close();
             }
 
         }

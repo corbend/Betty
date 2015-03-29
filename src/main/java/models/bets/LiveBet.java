@@ -37,7 +37,6 @@ public class LiveBet {
         this.funds = funds;
     }
 
-    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name="game_event_id")
     private GameEvent gameEvent;
 

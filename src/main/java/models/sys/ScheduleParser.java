@@ -109,6 +109,9 @@ public class ScheduleParser implements Serializable {
     private Boolean complete;
     @Transient
     private Date lastCompleteTime;
+    //дата следующего этапа парсинга
+    @Transient
+    private Date nextDate;
 
     public DateTime getLastCompleteTime() {
         return new DateTime(lastCompleteTime);
@@ -121,7 +124,7 @@ public class ScheduleParser implements Serializable {
         this.lastCompleteTime = lastCompleteTime.toDate();
     }
 
-    public Boolean isComplete() {
+    public Boolean getComplete() {
         return complete;
     }
 
@@ -159,6 +162,14 @@ public class ScheduleParser implements Serializable {
 
     public void setGame(Game game) {
         this.game = game;
+    }
+
+    public Date getNextDate() {
+        return nextDate;
+    }
+
+    public void setNextDate(Date date) {
+        this.nextDate = date;
     }
 
     @Override

@@ -57,9 +57,9 @@ public class ResolverMDB implements MessageListener {
         List<LiveBet> liveBetsForEvent = liveBetsManager.getBetsForEvent(gameEvent);
         List<UserBet> userBets = new ArrayList<>();
 
-        log.log(Level.INFO, "Proccess live bets resolving=>" + liveBetsForEvent.size() +
-                ", event=" + "(" + gameEvent.getId() + ")" + msg.getEvent() +
-                ", msg=" + msg.toString());
+        //log.log(Level.INFO, "Proccess live bets resolving=>" + liveBetsForEvent.size() +
+        //        ", event=" + "(" + gameEvent.getId() + ")" + msg.getEvent() +
+        //        ", msg=" + msg.toString());
 
         for (LiveBet liveBet: liveBetsForEvent) {
 

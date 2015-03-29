@@ -69,16 +69,8 @@ public class Game implements Serializable {
     //период обновления расписания
     private int sheduleEvery;
 
-    @OneToMany
-    @JoinColumn(name="bet_group_id")
+    @OneToMany(mappedBy = "game", cascade = CascadeType.PERSIST)
     private List<BetGroup> betGroups;
-    public List<BetGroup> getBetGroups() {
-        return betGroups;
-    }
-
-    public void setBetGroups(List<BetGroup> betGroups) {
-        this.betGroups = betGroups;
-    }
 
     private boolean active;
 
@@ -165,6 +157,14 @@ public class Game implements Serializable {
         sheduleEvery = v;
     }
 
+    public List<BetGroup> getBetGroups() {
+        return betGroups;
+    }
+
+    public void setBetGroups(List<BetGroup> betGroups) {
+        this.betGroups = betGroups;
+    }
+
     @Column(name="active")
     public boolean getActive() {
         return active;
@@ -203,5 +203,15 @@ public class Game implements Serializable {
         this.needToSchedule = needToSchedule;
     }
 
+    @Override
+    public boolean equals(Object other)
+    {
+        return other instanceof Game && (id != null) ? id.equals(((Game) other).getId()) : (other == this);
+    }
 
+    @Override
+    public int hashCode()
+    {
+        return id != null ? this.getClass().hashCode() + id.hashCode() : super.hashCode();
+    }
 }

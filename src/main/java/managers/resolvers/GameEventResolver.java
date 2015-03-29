@@ -81,11 +81,11 @@ public class GameEventResolver {
 
             if (gameEvents != null) {
                 for (GameEvent event : gameEvents) {
-                    log.log(Level.WARNING, "Event Check:" + event.getId());
+                    //log.log(Level.WARNING, "Event Check:" + event.getId());
                     GameEvent inMemoryGame = gameEventPoolManager.get(event.getId().toString());
                     //наличие по данному ключу данных, означает окончание игры
                     if (inMemoryGame == null) {
-                        log.log(Level.WARNING, "Event:" + event.toString() + "-> progress.");
+                        //log.log(Level.WARNING, "Event:" + event.toString() + "-> progress.");
                     } else {
                         ObjectMessage msg = context.createObjectMessage();
 
@@ -105,7 +105,7 @@ public class GameEventResolver {
 
                         GameEventMessage outm = new GameEventMessage(event, score1, score2);
                         msg.setObject(outm);
-                        log.log(Level.WARNING, "Event:" + event.toString() + "-> finished.");
+                        //log.log(Level.WARNING, "Event:" + event.toString() + "-> finished.");
                         context.createProducer().send(eventsQueue, msg);
 
                         //TODO - сделать удаление события после разрешения всех ставок из памяти

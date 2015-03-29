@@ -4,6 +4,7 @@ import main.java.managers.games.GameManager;
 import main.java.managers.games.GameSheduleManager;
 import main.java.managers.grabbers.ScheduleParserFactory;
 import main.java.managers.service.RedisManager;
+import main.java.managers.service.WebDriverLauncher;
 import main.java.models.games.Game;
 import main.java.models.games.GameEvent;
 import main.java.models.sys.ScheduleParser;
@@ -19,6 +20,7 @@ import javax.inject.Inject;
 import javax.interceptor.Interceptors;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
@@ -38,6 +40,9 @@ public class ScheduleParserStarter {
 
     @Resource
     private SessionContext ctx;
+
+    @EJB
+    private WebDriverLauncher webDriverLauncher;
 
     @Inject
     private RedisManager<ScheduleParser> redisManager;
@@ -111,22 +116,29 @@ public class ScheduleParserStarter {
     @PostConstruct
     public void init() {
 
-        List<ScheduleParser> lst = em.createNamedQuery("ScheduleParser.findAll", ScheduleParser.class).getResultList();
-        List<ScheduleParser> detachedList = new ArrayList<>();
-        //делаем все парсеры изначально исполнеными, чтобы запустить при первом запуске
-        for (ScheduleParser parser: lst) {
-            parser.setLastCompleteTime(DateTime.now().minusDays(1));
-            ScheduleParser clone = parser.clone();
-            clone.setGame(null);
-            detachedList.add(clone);
+        try {
+            webDriverLauncher.runWebdriver();
+
+            List<ScheduleParser> lst = em.createNamedQuery("ScheduleParser.findAll", ScheduleParser.class).getResultList();
+            List<ScheduleParser> detachedList = new ArrayList<>();
+
+            //делаем все парсеры изначально исполнеными, чтобы запустить при первом запуске
+            for (ScheduleParser parser : lst) {
+                parser.setLastCompleteTime(DateTime.now().minusDays(1));
+                ScheduleParser clone = parser.clone();
+                clone.setGame(null);
+                detachedList.add(clone);
+            }
+
+            //добавляем список парсеров в редис
+            redisManager.addList("Parsers", detachedList);
+
+            initTodayEvents();
+            executeParsers(detachedList, DateTime.now());
+            createNewSchedule();
+        } catch (IOException | InterruptedException e) {
+            log.log(Level.SEVERE, "FATAL--Chrome driver is not launched.");
         }
-
-        //добавляем список парсеров в редис
-        redisManager.addList("Parsers", detachedList);
-
-        initTodayEvents();
-        executeParsers(detachedList, DateTime.now());
-        createNewSchedule();
 
     }
 
@@ -162,15 +174,15 @@ public class ScheduleParserStarter {
 
         List<ScheduleParser> parsers = redisManager.getRange("Parsers", 0, 10);
 
-        log.log(Level.INFO, "Schedule Prepare Next->");
         DateTime date = redisManager.popDate(REDIS_NEXT_SCHEDULE_DATE_KEY);
+
+        log.log(Level.INFO, "Schedule Prepare Next->" + date);
 
         if (parsers.size() == 0) {
             log.log(Level.SEVERE, "[ERROR] - NO PARSERS FOUND!");
         }
 
         try {
-            log.log(Level.INFO, "Schedule Prepare->Last Checked Time=" + date);
             executeParsers(parsers, date);
             log.log(Level.INFO, "PARSE: PARSE COMPLETE!" + date);
         } catch (Exception e) {
@@ -239,6 +251,8 @@ public class ScheduleParserStarter {
                 needToParse.add(dbParser);
             }
         }
+
+        log.log(Level.INFO, "MAKE QUEUE OF SCHEDULE PARSERS->" + needToParse.size() + ", date=" + date);
 
         List<GameEvent> ls = eventParserFactory.parseByName(needToParse,
                 activeGames, date.getYear(), date.getMonthOfYear(), date.getDayOfMonth());

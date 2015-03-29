@@ -43,7 +43,13 @@
                     <p:panel header="Events Panel" style="margin-bottom: 20px;">
                         <!--<h:form id="eventsForm">-->
                             <p:growl id="event_messages"/>
-                            <p:dataTable id="eventsTable" var="gameEvent" selectionMode="single" value="#{betManageCtrl.events}" selection="#{betGroupTableCtrl.selectedGameEvent}" rowKey="#{gameEvent.id}">
+                            <p:dataTable id="eventsTable" var="gameEvent" selectionMode="single"
+                                         value="#{betManageCtrl.events}" selection="#{betGroupTableCtrl.selectedGameEvent}"
+                                         rowKey="#{gameEvent.id}"
+                                         rows="15"
+                                         paginator="true"
+                                         paginatorTemplate="{CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                         rowsPerPageTemplate="15,25,50,100">
                                 <f:facet name="header">
                                     <h:outputText value="Date From"/>
                                     <p:calendar id="eventDateStart" value="#{betManageCtrl.scheduleStartDate}" style="display:inline-block;">
@@ -84,7 +90,17 @@
                             </p:dataTable>
                         <!--</h:form>-->
                     </p:panel>
-                    <div  id="betsGroupPanelWrapper" style="position: relative; width: 100%; margin-right: 20px">
+
+                    <h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
+                        <p:outputLabel for="attachMode" value="Attach Bet Group To:" />
+                        <p:selectOneRadio id="attachMode" value="#{betGroupTableCtrl.attachMode}">
+                            <f:selectItem itemLabel="Event" itemValue="event" />
+                            <f:selectItem itemLabel="Game" itemValue="game" />
+                            <p:ajax update=":globalForm:betsGroupPanel :globalForm:bet_messages" listener="#{betGroupTableCtrl.onChangeAttachMode}" />
+                        </p:selectOneRadio>
+                    </h:panelGrid>
+
+                    <div id="betsGroupPanelWrapper" style="position: relative; width: 100%; margin-right: 20px">
                         <p:panel id="betsGroupPanel" header="Bet Group Panel" style="width: 48%; float:left; margin-bottom: 20px;">
 
                             <p:growl id="bet_messages"/>
@@ -107,6 +123,7 @@
                             <p:commandButton actionListener="#{betGroupTableCtrl.saveChangesInGroup}" disabled="#{betGroupTableCtrl.noGroup}" update="bet_messages" value="Update Group"/>
                             <p:commandButton actionListener="#{betGroupTableCtrl.removeBetFromGroup}" disabled="#{betGroupTableCtrl.noGroup}" update="bet_messages" value="Remove From Group"/>
                             <p:commandButton actionListener="#{betGroupTableCtrl.activateGroup}" disabled="#{betGroupTableCtrl.noGroup}" update="bet_messages :globalForm:liveBetsPanel" value="Activate Group"/>
+                            <p:commandButton actionListener="#{betGroupTableCtrl.createNewGroup}" disabled="#{!betGroupTableCtrl.createNewGroupToGameAllowed}" update="bet_messages :globalForm:gameBetsPanel" value="Create Group For Game"/>
 
                         </p:panel>
 
@@ -151,6 +168,38 @@
                                 </div>
                             </h:form>
                         </div>
+
+                        <p:panel id="gameBetsPanel" header="Game Bets Panel" style="width: 48%; float:right; margin-bottom: 20px;">
+                            <p:growl id="game_bet_groups_message"/>
+                            <f:facet name="header">
+                                <h:outputText value="Select Game"/>
+                                <p:selectOneMenu value="#{betGroupForGameCtrl.selectedGameId}">
+                                    <f:selectItem itemLabel="Select One" itemValue="" />
+                                    <f:selectItems value="#{betGroupForGameCtrl.gameItems}" />
+                                    <p:ajax update=":globalForm:gameBetGroupsTable :globalForm:game_bet_groups_message" listener="#{betGroupForGameCtrl.onSelectGame}" />
+                                    <p:ajax update=":globalForm:betsGroupPanel" listener="#{betGroupTableCtrl.onSelectGame}" />
+                                    <f:converter converterId="gameConverter"/>
+                                </p:selectOneMenu>
+                            </f:facet>
+                            <p:dataTable id="gameBetGroupsTable" var="betGroup" selectionMode="single" value="#{betGroupForGameCtrl.betGroups}" selection="#{betGroupForGameCtrl.selectedBetGroup}" rowKey="#{betGroup.id}">
+                                <p:ajax event="rowSelect" listener="#{betGroupForGameCtrl.onSelectEvent}"/>
+                                <p:ajax event="rowSelect" update=":globalForm:betsGroupPanel" listener="#{betGroupTableCtrl.onSelectBetGroupForGameEvent}"/>
+
+                                <p:column headerText="Bet Id">
+                                    <h:outputText value="#{betGroup.id}" />
+                                </p:column>
+                                <f:facet name="footer">
+                                    <p:commandButton actionListener="#{betGroupForGameCtrl.removeBetGroupFromGame}" update=":globalForm:game_bet_groups_message :globalForm:gameBetsPanel" value="Remove"/>
+                                </f:facet>
+                            </p:dataTable>
+                            <h:form>
+                                <p:growl id="auto_activate_message"/>
+                                <h:outputText value="Auto Activate"/>
+                                <p:selectBooleanCheckbox value="#{betGroupForGameCtrl.autoActivate}">
+                                    <p:ajax update="auto_activate_message" listener="#{betGroupForGameCtrl.setAutoActivate}" />
+                                </p:selectBooleanCheckbox>
+                            </h:form>
+                        </p:panel>
 
                         <p:panel id="liveBetsPanel" header="Live Bets Panel" style="width: 48%; float:right; margin-bottom: 20px;">
                             <p:dataTable id="liveBetsTable" var="liveBet" selectionMode="single" value="#{liveBetsTableView.bets}" selection="#{liveBetsTableView.selectedLiveBet}" rowKey="#{liveBet.id}">

@@ -240,7 +240,7 @@ public class LiveScoreInParser {
                 shedules.add(newGameEvent);
 
                 counter++;
-                log.log(Level.INFO, "GAME EVENT PARSED=" + newGameEvent.toString());
+                //log.log(Level.INFO, "GAME EVENT PARSED=" + newGameEvent.toString());
             }
             //TODO - parse scheduled
 
@@ -258,7 +258,7 @@ public class LiveScoreInParser {
             String targetUrl = url.substring(0) + game.getName();
             WebElement rootTable = getRootWithDate(driver, targetUrl);
             List<GameEvent> result = getDoubleLineEventRows(game.getName(), rootTable);
-            driver.quit();
+            driver.close();
             return result;
 
         } catch (MalformedURLException | NoSuchElementException | org.openqa.selenium.TimeoutException e) {
@@ -312,7 +312,7 @@ public class LiveScoreInParser {
                 parseGameStat(newGameEvent, row);
                 shedules.add(newGameEvent);
 
-                log.log(Level.INFO, "GAME EVENT PARSED=" + newGameEvent.toString());
+                //log.log(Level.INFO, "GAME EVENT PARSED=" + newGameEvent.toString());
             }
         }
 
@@ -356,7 +356,7 @@ public class LiveScoreInParser {
     public List<GameEvent> parse(ScheduleParser parser, Game game, int forYear, int forMonth, int forDate) {
 
         parsedDate = new DateTime(forYear, forMonth, forDate, 0, 0, 0);
-        log.log(Level.INFO, "PREPARE TO PARSE SCHEDULE->" + game.getName());
+        //log.log(Level.INFO, "PREPARE TO PARSE SCHEDULE->" + game.getName());
         List<GameEvent> ls = parseFor(game);
 
         parser.setLastCompleteTime(DateTime.now());
@@ -373,7 +373,7 @@ public class LiveScoreInParser {
 
         for (ScheduleParser parser: parsers) {
             if (gameNames.contains(parser.getName())) {
-                log.log(Level.INFO, "PREPARE TO PARSE SCHEDULE->" + parser.getName());
+                //log.log(Level.INFO, "PREPARE TO PARSE SCHEDULE->" + parser.getName());
                 parsedEvents.addAll(
                         parse(parser, gameList.get(gameNames.indexOf(parser.getName())), forYear, forMonth, forDate));
             }

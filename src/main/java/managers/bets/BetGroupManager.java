@@ -1,16 +1,20 @@
 package main.java.managers.bets;
 
+import main.java.managers.games.GameSheduleManager;
 import main.java.models.bets.BetGroup;
 import main.java.models.bets.CustomBet;
 import main.java.models.bets.LiveBet;
+import main.java.models.games.Game;
 import main.java.models.games.GameEvent;
 
+import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.faces.application.FacesMessage;
 import javax.faces.context.FacesContext;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
+import java.util.ArrayList;
 import java.util.List;
 
 @Stateless
@@ -18,6 +22,9 @@ public class BetGroupManager {
 
     @PersistenceContext
     private EntityManager em;
+
+    @EJB
+    private GameSheduleManager gameEventManager;
 
     public List<BetGroup> getAllBetGroups() {
 
@@ -66,19 +73,72 @@ public class BetGroupManager {
         return false;
     }
 
-    public boolean activateGroup(BetGroup group) {
+    public boolean addBetToGroup(BetGroup betGroup, CustomBet selectedBet) {
 
-        List<CustomBet> betsToActivate = group.getBets();
-
-        for (CustomBet bet: betsToActivate) {
-            LiveBet liveBet = new LiveBet();
-            liveBet.setType(bet.getBetTypeString());
-            liveBet.setCoefficient(bet.getCoefficient());
-            liveBet.setGameEvent(group.getGameEvent());
-            em.persist(liveBet);
+        if (betGroup.getId() != null) {
+            em.flush();
+            if (!betGroup.getBets().contains(selectedBet)) {
+                betGroup.getBets().add(selectedBet);
+            }
+            if (!selectedBet.getBetGroups().contains(betGroup)) {
+                selectedBet.getBetGroups().add(betGroup);
+            }
+            em.merge(betGroup);
+            em.merge(selectedBet);
+            em.flush();
+            return true;
         }
 
-        return true;
+        return false;
+    }
+
+    public int activateGroup(BetGroup group) {
+        int counter = 0;
+        List<CustomBet> betsToActivate = group.getBets();
+
+        //активация для конкретного игрового события
+        if (group.getGame() == null) {
+            List<LiveBet> liveBets = new ArrayList<>();
+            GameEvent gameEvent = group.getGameEvent();
+            gameEvent.setActivateBetTypes(gameEvent.getLiveBets());
+            for (CustomBet bet : betsToActivate) {
+                LiveBet liveBet = new LiveBet();
+                liveBet.setType(bet.getBetTypeString());
+                liveBet.setCoefficient(bet.getCoefficient());
+                liveBet.setGameEvent(gameEvent);
+                em.persist(liveBet);
+                liveBets.add(liveBet);
+                counter++;
+            }
+            gameEvent.setLiveBets(liveBets);
+            em.merge(gameEvent);
+
+        } else {
+            //активация для выбранного типа игры (для всех событий)
+            List<GameEvent> allEventForGameToday = gameEventManager.getAllTodaySchedules();
+
+            for (GameEvent gameEvent: allEventForGameToday) {
+                List<LiveBet> liveBets = new ArrayList<>();
+                gameEvent.setActivateBetTypes(gameEvent.getLiveBets());
+                if (gameEvent.getGame().getId().equals(group.getGame().getId())) {
+                    List<CustomBet> bets = group.getBets();
+                    for (CustomBet bet : bets) {
+                        if (!gameEvent.getActivateBetTypes().contains(bet.getBetTypeString())) {
+                            LiveBet liveBet = new LiveBet();
+                            liveBet.setType(bet.getBetTypeString());
+                            liveBet.setCoefficient(bet.getCoefficient());
+                            liveBet.setGameEvent(gameEvent);
+                            em.persist(liveBet);
+                            liveBets.add(liveBet);
+                            counter++;
+                        }
+                    }
+                    gameEvent.setLiveBets(liveBets);
+                }
+            }
+        }
+
+        return counter;
     }
 
     public boolean removeBet(BetGroup group, CustomBet betToRemove) {

@@ -6,6 +6,7 @@ import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.exceptions.JedisException;
 
 import javax.ejb.Stateless;
 import javax.inject.Inject;
@@ -79,7 +80,11 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
 
             result = (T) new MemoryObject<>(value).getObject();
         } finally {
-            pool.returnResource(src);
+            try {
+                pool.returnResource(src);
+            } catch (JedisException e) {
+                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+            }
         }
         return result;
     }
@@ -98,7 +103,11 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
                 src.set(namespace + ":" + obj.getId(), setVal);
             }
         } finally {
-            pool.returnResource(src);
+            try {
+                pool.returnResource(src);
+            } catch (JedisException e) {
+                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+            }
         }
     }
 
@@ -112,7 +121,11 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
                 client.set(key, item.toString());
             }
         } finally {
-            pool.returnResource(src);
+            try {
+                pool.returnResource(src);
+            } catch (JedisException e) {
+                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+            }
         }
     }
 
@@ -127,7 +140,11 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
                 res = client.get(key);
             }
         } finally {
-            pool.returnResource(src);
+            try {
+                pool.returnResource(src);
+            } catch (JedisException e) {
+                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+            }
         }
         return res;
     }
@@ -143,7 +160,11 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
                 client.lpush(key, dateString);
             }
         } finally {
-            pool.returnResource(src);
+            try {
+                pool.returnResource(src);
+            } catch (JedisException e) {
+                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+            }
         }
     }
 
@@ -158,7 +179,11 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
                 res = DateTime.parse(client.rpop(key));
             }
         } finally {
-            pool.returnResource(src);
+            try {
+                pool.returnResource(src);
+            } catch (JedisException e) {
+                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+            }
         }
 
         return res;
@@ -189,7 +214,11 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
                 }
             }
         } finally {
-            pool.returnResource(src);
+            try {
+                pool.returnResource(src);
+            } catch (JedisException e) {
+                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+            }
         }
 
     }
@@ -213,7 +242,11 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
                 convertedList.add(convertedObject);
             }
         } finally {
-            pool.returnResource(src);
+            try {
+                pool.returnResource(src);
+            } catch (JedisException e) {
+                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+            }
         }
 
         return convertedList;
@@ -244,7 +277,11 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
 
             }
         } finally {
-            pool.returnResource(src);
+            try {
+                pool.returnResource(src);
+            } catch (JedisException e) {
+                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+            }
         }
 
         return convertedList;
@@ -264,7 +301,11 @@ public class RedisManager<T> implements MemoryPoolManager<T>{
             }
             res = getRange(key, 0, -1);
         } finally {
-            pool.returnResource(src);
+            try {
+                pool.returnResource(src);
+            } catch (JedisException e) {
+                log.log(Level.SEVERE, "Jedis Error->" + e.toString());
+            }
         }
 
         return res;

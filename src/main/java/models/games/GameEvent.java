@@ -1,11 +1,14 @@
 package main.java.models.games;
 
 import main.java.models.bets.BetGroup;
+import main.java.models.bets.LiveBet;
+import org.eclipse.jetty.util.ConcurrentHashSet;
 
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name="game_events")
@@ -30,7 +33,9 @@ public class GameEvent implements Serializable {
         this.id = id;
     }
 
-    public GameEvent() {}
+    public GameEvent() {
+        activateBetTypes = new ConcurrentHashSet<>();
+    }
 
     public GameEvent(Long id, Game game, BetGroup betGroup, Date dateStart, Date dateEnd,
                      String eventName, String eventTime, String eventLocation, String team1Name, String team2Name) {
@@ -44,6 +49,7 @@ public class GameEvent implements Serializable {
         this.eventTime = eventTime;
         this.team1Name = team1Name;
         this.team2Name = team2Name;
+        activateBetTypes = new ConcurrentHashSet<>();
     }
 
     private String eventName;
@@ -58,6 +64,9 @@ public class GameEvent implements Serializable {
 
     @OneToOne(mappedBy="gameEvent")
     private BetGroup betGroup;
+
+    @OneToMany(mappedBy="gameEvent", fetch = FetchType.EAGER)
+    private List<LiveBet> liveBets;
 
     public Game getGame() {
         return game;
@@ -171,6 +180,31 @@ public class GameEvent implements Serializable {
 
     public void setGameName(String gameName) {
         this.gameName = gameName;
+    }
+
+    @Transient
+    private Set<String> activateBetTypes;
+
+    public Set<String> getActivateBetTypes() {
+        return activateBetTypes;
+    }
+
+    public void setActivateBetTypes(List<LiveBet> liveBets) {
+        for (LiveBet liveBet: liveBets) {
+            if (!activateBetTypes.contains(liveBet.getType())) {
+                activateBetTypes.add(liveBet.getType());
+            }
+        }
+    }
+
+    public List<LiveBet> getLiveBets() {
+        return liveBets;
+    }
+
+    public void setLiveBets(List<LiveBet> liveBets) {
+
+        this.liveBets = liveBets;
+        setActivateBetTypes(liveBets);
     }
 
     @Override
